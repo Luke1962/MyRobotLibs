@@ -15,17 +15,17 @@
 
 #define SERIAL_PC Serial		//  comandi dal PC
 #define SERIAL_PC_BAUD_RATE 115200
+#define SERIAL_ROBOT Serial1		// SERIAL_ROBOT=Serial1  
+#define SERIAL_ROBOT_BAUD_RATE 115200
 
  /// messaggio di test
  /// 31,1,1,1,1,300,100,220,1,1,1,1,1,1,70;
-#define SERIAL_BT Serial	//Serial2,   mettere Serial per test interfaccia
+#define SERIAL_BT Serial2	//Serial2,   mettere Serial per test interfaccia
 #define SERIAL_BT_BAUD_RATE 115200
 
-#define SERIAL_WIFI Serial		//  comunicazione bidirezionale via TCP
+#define SERIAL_WIFI Serial3		//  comunicazione bidirezionale via TCP
 #define SERIAL_WIFI_BAUD_RATE 115200
 
-#define SERIAL_ROBOT Serial1		// SERIAL_ROBOT=Serial1  
-#define SERIAL_ROBOT_BAUD_RATE 115200
 
 
 #define Pin_SpeechSerialBusy 41
@@ -38,6 +38,14 @@
 #define Pin_TFT_WR 37// 41
 #define Pin_TFT_CS 38// 42
 #define Pin_TFT_RST 39// 43
+
+// SCHEDA SD
+ 
+#define Pin_SD_SCK 44 
+#define Pin_SD_CS 45 
+#define Pin_SD_OUT 46 
+#define Pin_SD_IN 47 
+
 
 // Touch screen
 #define Pin_TS_TIRQ  2

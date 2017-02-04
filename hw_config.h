@@ -4,6 +4,19 @@
  * Created: 25/01/2015 16:53:17
  *  Author: Luca
  */ 
+ //////////////////////////////////////////////////////////////////////////
+ //																		//
+ //						 O P Z I O N I   R O B O T						//
+ //																		//
+ //////////////////////////////////////////////////////////////////////////
+
+#define OPT_COMPASS 1
+#define OPT_SERVOSONAR 1	//INCLUDI FUNZIONALITA' SERVO-SONAR
+#define OPT_ENCODERS  0	//INCLUDI ENCODERS
+ //#define OPT_BT 0	//bluetooth
+ //#define OPT_SPEECH 0
+#define OPT_GPS 1
+#define OPT_LDS 1	//Laser Distance sensor
 
 
 #ifndef HW_CONFIG_H_

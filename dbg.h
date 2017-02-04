@@ -3,6 +3,11 @@
 #include <Arduino.h>
 
 
+
+#define DEBUG_OFF
+//#define DEBUG_ON
+
+
 #ifdef DEBUG_ON
 #define DEBUG_SERIAL Serial
 #define DEBUG_SERIAL_BAUD_RATE 115200

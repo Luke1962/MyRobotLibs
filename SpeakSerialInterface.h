@@ -36,14 +36,14 @@ void speakSerial(const char inStr[]) {
 
 
 }*/
-#define SPEAK(s) speakSerial(s)
-#define SPEAK_CIAO				speakSerial("h"); 			
-#define SPEAK_OIOI				speakSerial("O"); 			
-#define SPEAK_CIAOCHISEI		speakSerial("ciao  ki sei"); 	
-#define SPEAK_OK				speakSerial("k");				
-#define SPEAK_TEST				speakSerial("t");				
-#define SPEAK_MODE_SLAVE		speakSerial("SLEIV");			
-#define SPEAK_AUTONOMO			speakSerial("AUTONOMO");		
+#define SPEAK(s) speakFifo(s)
+#define SPEAK_CIAO				SPEAK("h"); 			
+#define SPEAK_OIOI				SPEAK("O"); 			
+#define SPEAK_CIAOCHISEI		SPEAK("ciao  ki sei"); 	
+#define SPEAK_OK				SPEAK("k");				
+#define SPEAK_TEST				SPEAK("t");				
+#define SPEAK_MODE_SLAVE		SPEAK("SLEIV");			
+#define SPEAK_AUTONOMO			SPEAK("AUTONOMO");		
 
 
 #pragma endregion

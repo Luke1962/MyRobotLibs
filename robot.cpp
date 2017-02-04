@@ -1,34 +1,12 @@
+// / ///////////////////////////////////////////////////////////////////////
+///																		//
+//						CLASSE   R O B O T								//
+///																		//
+// ////////////////////////////////////////////////////////////////////////
+
+
+
 #include "robot.h"
-
-//#include <../robot/robotmodel/robotModel.h>
-#include "robot.h"
-//#include "speak.h" spostata nel main
-#include "dbg.h"
-
-
-#include <FrequencyTimer2/FrequencyTimer2.h>	
-#include <TimerThree/TimerThree.h> //usato per il clock motori
-#include <FlexiTimer2/FlexiTimer2.h>
-
-#include <digitalWriteFast/digitalWriteFast.h>
-
-//#include "printf.h"
-#include <ClickEncoder\ClickEncoder.h>
-
-// compass
-#include <Adafruit_Sensor\Adafruit_Sensor.h> //richiesto dalla liberia compass Adafruit_HMC5883_U
-#include <Adafruit_HMC5883_U\Adafruit_HMC5883_U.h>	//compass
-
-#if OPT_GPS
-
-#include <TinyGPSplus/TinyGPS++.h> //deve essere incluso anche nel main
-
-// The serial connection to the GPS device
-//SoftwareSerial SerialGps(RXPin, TXPin);
-
-
-TinyGPSPlus Gps;
-
 
 #pragma region  path_recorder
 //// registra i movimenti fatti
@@ -43,8 +21,6 @@ TinyGPSPlus Gps;
 //// create a stack of numbers.
 //StackArray <motionHistory_t> stack;
 #pragma endregion
-
-#endif
 
 
 //operatingMode_e operatingMode;
@@ -174,7 +150,7 @@ TinyGPSPlus Gps;
 // Reserve space for 10 entries in the average bucket.
 // Change the type between < and > to change the entire way the library works.
 ///----------------------------------------------------------
-Average<float> avgPing(SONAR_MAX_SAMPLES);
+Average<float> avgPing(10);
 	
 	
 ///----------------------------------------------------------
@@ -184,26 +160,28 @@ robot_c::robot_c(){
 	this->begin(operatingMode_e::MODE_SLAVE);
 }
 ///inizializzazione di base
-void robot_c::_begin(){  
-	dbg("begin..")
+int robot_c::_initHW(){  
+	dbg("1,robot_c::_initHW()..BEGIN;")
+
+
 	// configuro i pin in uscita								----
 	pinMode(Pin_MotCK, OUTPUT);			digitalWrite(Pin_MotCK,1); // il CK è a logica negata : impulso 0 di ampiezza minima di 0.5 uSec. --pinMode(FREQUENCYTIMER2_PIN, OUTPUT);
 
 	pinMode(Pin_MotCWR, OUTPUT);		digitalWrite(Pin_MotCWR,0);
-	pinMode( Pin_MotENR, OUTPUT );		digitalWrite( Pin_MotENR, !ROBOT_MOTORENABLE_ACTIVE );
+	pinMode(Pin_MotENR, OUTPUT );		digitalWrite(Pin_MotENR, !ROBOT_MOTORENABLE_ACTIVE );
 	pinMode(Pin_MotCWL, OUTPUT);		digitalWrite(Pin_MotCWL,0);
-	pinMode( Pin_MotENL, OUTPUT );		digitalWrite( Pin_MotENL, !ROBOT_MOTORENABLE_ACTIVE );
+	pinMode(Pin_MotENL, OUTPUT );		digitalWrite(Pin_MotENL, !ROBOT_MOTORENABLE_ACTIVE );
 	pinMode(Pin_Rele1, OUTPUT);			digitalWrite(Pin_Rele1,1);
 	pinMode(Pin_Rele2, OUTPUT);			digitalWrite(Pin_Rele2,1);	// i Rele vanno a logica negata
 	pinMode(Pin_LaserOn, OUTPUT);		digitalWrite(Pin_LaserOn,0);
 	pinMode(Pin_SonarTrig, OUTPUT);		digitalWrite(Pin_SonarTrig,128);	// pin TRIGGER vs Sonar
-	pinMode( Pin_LED_TOP_R, OUTPUT );		digitalWrite( Pin_LED_TOP_R, 0 );	// led superiore
-	pinMode( Pin_LED_TOP_G, OUTPUT );		digitalWrite( Pin_LED_TOP_G, 0 );	// led superiore
-	pinMode( Pin_LED_TOP_B, OUTPUT );		digitalWrite( Pin_LED_TOP_B, 0 );	// led superiore
+	pinMode(Pin_LED_TOP_R, OUTPUT );	digitalWrite( Pin_LED_TOP_R, 0 );	// led superiore
+	pinMode(Pin_LED_TOP_G, OUTPUT );	digitalWrite( Pin_LED_TOP_G, 0 );	// led superiore
+	pinMode(Pin_LED_TOP_B, OUTPUT );	digitalWrite( Pin_LED_TOP_B, 0 );	// led superiore
 
 	//--------------------------------------------------------------
 
- 	// configuro i pin in ingresso (default) ----
+	// configuro i pin in ingresso (default) ----
 	pinMode(Pin_irproxy_FW, INPUT);
 	pinMode(Pin_irproxy_FWHL, INPUT);
 	pinMode(Pin_irproxy_FR, INPUT);		
@@ -304,22 +282,7 @@ void robot_c::_begin(){
 		bt.cmd("AT+BAUD4", 4000); //9600 baud
 		digitalWrite(Pin_BtOnOff, HIGH);
 
-		//DEBUG_PRINTLN("Starting recovery in 3 seconds.");
-		//btSerial.cmdMode2Start(powerPin);
-
-		//// Provide some time for the user to start the serial monitor
-		//delay(3000);
-
-		//// For curiosity's sake, ask for the old settings
-		//btSerial.cmd("AT+UART?");
-
-		//// Now set the baud to 19200N1
-		//btSerial.cmd("AT+UART=9600,0,0");
-
-		//// Exit command mode and switch to the new baud setting
-		//btSerial.cmd("AT+RESET");
-		//btSerial.cmdMode2End();
-		  
+	  
 		dbg("Waiting BT pairing...");
 		while (!bt.connected()){
 			dbg(".");
@@ -328,39 +291,48 @@ void robot_c::_begin(){
 	#endif
 
 
- 	setPose(0, 0, 90);
+	setPose(0, 0, 90);
   
- 	status.cmd.commandDir = STOP;
+	status.cmd.commandDir = STOP;
   
 	//this->readSensors();
 
-
+	dbg("1,_initHW().. END;");
+	return 1;
 };	// end begin()
 
-void robot_c::begin(operatingMode_e initialOperatingMode) {
-	status.operatingMode = initialOperatingMode;
-	_begin();
-}
+//void robot_c::beginRobot(operatingMode_e initialOperatingMode) {
+//	status.operatingMode = initialOperatingMode;
+//	_initHW();
+//}
+#if OPT_GPS && OPT_COMPASS && OPT_SERVOSONAR && OPT_LDS && OPT_COMPASS
+	void robot_c::beginRobot(TinyGPSPlus *pGps, Servo *pServoSonar, NewPing *pSonar, VL53L0X *pDistanceSensor, COMPASS_CLASS *pCompass){
+		stop();
 
-#if OPT_COMPASS && OPT_SERVOSONAR && OPT_LDS && OPT_COMPASS
-	void robot_c::begin( Servo *pServoSonar, NewPing *pSonar, VL53L0X *pDistanceSensor, COMPASS_CLASS *pCompass){
- 		this->_pServoSonar = pServoSonar;
+		this->_pGps = pGps;
+		this->_pServoSonar = pServoSonar;
 		this->_pSonar = pSonar;
 		this->_pLDS = pDistanceSensor;
 		this->_pCompass = pCompass;
+		status.operatingMode = ROBOT_STARTING_MODE;
+		status.sensors.ignoreIR = false; //utilizzo gli IR di default
+		_initHW();
 
-		_begin();
+		#if OPT_SERVOSONAR
 		beginServosonar(pServoSonar, pSonar);
-		beginLDS(pDistanceSensor);
-		beginCompass(pCompass);
+		#endif
 
-		this->readSensors();
+	//	beginLDS(pDistanceSensor);
+		beginCompass(pCompass);
+//		this->readAllSensors();
+
 	}
 #endif
 
 #if OPT_SERVOSONAR
 
 	void robot_c::beginServosonar( Servo *pServoSonar, NewPing *pSonar){
+		//MSG(" robot_c::beginServosonar();")
 		this->_pServoSonar = pServoSonar;
 		this->_pSonar = pSonar;
 		if (!_pServoSonar->attached())
@@ -460,7 +432,28 @@ void robot_c::begin(operatingMode_e initialOperatingMode) {
 */
 
 	
+	//////////////////////////////////////////////////////////////////////////
+	// Posiziona il servo
+	//////////////////////////////////////////////////////////////////////////
 	
+	void robot_c::ServoAtPos( int alfa ){
+		//		analogWrite(Pin_ServoSonarPWM, servoPos);
+		//		this->_pServoSonar->attach(Pin_ServoSonarPWM);
+
+		// Posiziono il sonar all'angolo desiderato se compreso tra 0 e 180
+		if ((alfa<=180)&&(alfa >=0))
+		{
+			if (!_pServoSonar->attached())
+			{
+				this->_pServoSonar->attach(Pin_ServoSonarPWM);
+			}
+
+			_pServoSonar->write( alfa ); //servoSonar.write( servoPos );
+			delay(40);
+		}
+		
+//		this->_pServoSonar->detach();
+	}
 	
 
 
@@ -489,7 +482,7 @@ void robot_c::begin(operatingMode_e initialOperatingMode) {
 			while ( (servoPos >= status.parameters.sonarStartAngle) && (servoPos <= status.parameters.sonarEndAngle) && (i>=0) && (i<SONAR_ARRAY_SIZE))
 			{
 				
-				_pServoSonar->write( servoPos );//sposto il sonar
+				ServoAtPos( servoPos );//sposto il sonar
 
 				//delay(max(analogRead(Pin_AnaPot1),30));// Wait [ms] between pings (about 20 pings/sec). 29ms should be the shortest delay between pings. 
 				
@@ -512,7 +505,7 @@ void robot_c::begin(operatingMode_e initialOperatingMode) {
 				//debug
 				//printf("\n >servoPos %d , echo %u" , servoPos, status.sensors.sonarEchos[i]);
 				dbg2("servoPos",servoPos)
- 				dbg2("eco",uS)
+				dbg2("eco",uS)
 				/*	
 					status.sensors.sonarEchos[i] = _pSonar->ping_cm();
 				*/
@@ -629,15 +622,15 @@ void robot_c::begin(operatingMode_e initialOperatingMode) {
 	/// ///////////////////////////////////////////////////////////////////////
 	// Esegue un singolo ping alla posizione specificata(0-180°) e ritorna la distanza
 	/// ///////////////////////////////////////////////////////////////////////
-	int robot_c::SonarPingAtPos( int pos ){
+	int robot_c::sonarPingAtPos( int pos ){
 		//		analogWrite(Pin_ServoSonarPWM, servoPos);
 		//		this->_pServoSonar->attach(Pin_ServoSonarPWM);
 
 		// Posiziono il sonar all'angolo desiderato
- 		this->_pServoSonar->write( pos ); //servoSonar.write( servoPos );
+		ServoAtPos( pos ); //servoSonar.write( servoPos );
 		
 		delay( 50 );	//serve a stabilizzare le oscillazioni
-		return SonarPing();
+		return sonarPing();
 
 		//unsigned int echoTime = 0;
 		//echoTime = this->_pSonar->ping();         // Calls the ping method and returns with the ping echo distance in uS.
@@ -657,14 +650,14 @@ void robot_c::begin(operatingMode_e initialOperatingMode) {
 			samples = SONAR_MAX_SAMPLES;
 		}
 		// Posiziono il sonar all'angolo desiderato
- 		this->_pServoSonar->write( pos ); //servoSonar.write( servoPos );
+		ServoAtPos( pos ); //servoSonar.write( servoPos );
 		
 		delay( 50 );	//serve a stabilizzare le oscillazioni
 
 		for (int i = 0; i < samples; i++)
 		{
 
-			avgPing.push(SonarPing());
+			avgPing.push(sonarPing());
 		}
 		
 		LASER_OFF
@@ -680,10 +673,10 @@ void robot_c::begin(operatingMode_e initialOperatingMode) {
 		*maxStdDev = avgPing.stddev();
 		return dist;
 
- 	}	//////////////////////////////////////////////////////////////////////////
+	}	//////////////////////////////////////////////////////////////////////////
 	/// Esegue un singolo ping alla posizione corrente e ritorna  la distanza
 	//////////////////////////////////////////////////////////////////////////
-	int robot_c::SonarPing( ){
+	int robot_c::sonarPing( ){
 		return  this->_pSonar->ping_cm();// / US_ROUNDTRIP_CM;
 
 	}
@@ -696,13 +689,26 @@ void robot_c::begin(operatingMode_e initialOperatingMode) {
 #if OPT_LDS
 
 	void robot_c::beginLDS(VL53L0X *pDistanceSensor) {
-		this->_pLDS = pDistanceSensor;
-		_begin();
-		_pLDS->init();
-		this->readSensors();
+		dbg("1, robot_c::beginLDS();")
+			this->_pLDS = pDistanceSensor;
+		_initHW();
+		_pLDS->setTimeout(1000);
+		dbg("1,_pLDS->readRangeSingleMillimeters();")
+		uint16_t d = this->_pLDS->readRangeSingleMillimeters();
+		if (!this->_pLDS->timeoutOccurred()) {
+		dbg("1,_pLDS->init();;")
+
+			_pLDS->init();
+		}
+		else
+		{
+			dbg("1,LDS timeout;")
+		}
+		this->readAllSensors();
+		dbg("1,beginLDS  END;")
 	}
 	int robot_c::getLDSDistance(){
-
+		_pLDS->setTimeout(500);
 		uint16_t d = this->_pLDS->readRangeSingleMillimeters();
 		if (!this->_pLDS->timeoutOccurred()) { 
 			if (d/10 < LDS_MAX_DISTANCE_CM)
@@ -717,7 +723,7 @@ void robot_c::begin(operatingMode_e initialOperatingMode) {
 		}
 		else
 		{
-			dbg("LDS TIMEOUT");
+			MSG("LDS T.OUT");
 			return LDS_TIMEOUT_DISTANCE_CM ;
 		}
 	}
@@ -804,8 +810,8 @@ void robot_c::LDSScanBatch(){
 					///se la distanza non è quella massima
 					/// interrompo l'accumul e restituisco la posizione media
 					maxDistAtAngle /= maxDistAtAngleCnt;
-					dbg2("possible exit at:", maxDistAtAngle);
-					dbg2("\t cnt:", maxDistAtAngleCnt);
+					MSG2("possible exit at:", maxDistAtAngle);
+					//dbg2("\t cnt:", maxDistAtAngleCnt);
 
 					if (bestEscapeWidth<0 || bestEscapeWidth<maxDistAtAngleCnt)
 					{
@@ -851,14 +857,14 @@ void robot_c::LDSScanBatch(){
 	}	//sweep successivo
 
 	//Serial.print("maxDistAtAngle:"); Serial.println(maxDistAtAngle);
-	dbg("end Scan");
+	MSG("end Scan");
 		
 
 	_pServoSonar->detach();	//scollego il Servo
 
 	status.parameters.SonarMaxDistAngle = maxDistAtAngle;
-	dbg2("bestUscitaAtAngle:", bestEscapeAtAngle);
-	dbg2("bestUscita cnt:", bestEscapeWidth);
+	MSG2("bestExitAtAngle:", bestEscapeAtAngle);
+	MSG2("bestExit cnt:", bestEscapeWidth);
 	LASER_OFF	// Spengo il Laser
 
 }
@@ -893,16 +899,6 @@ int robot_c::LDSPing() {
 }
 /// Ritorna la distanza in cm#endif // SERVO_LDS
 #endif
-
-
-#if OPT_COMPASS
-
-	void robot_c::beginCompass(COMPASS_CLASS *pCompass){
- 		this->_pCompass = pCompass;
-	}
-
-
-#endif // SERVO_SONAR
 
 
 
@@ -1016,9 +1012,11 @@ void robot_c::_motorCKpulse()		// chiamato da Timer2; frequenza impostata  da _m
 //	Serial.print( status.cmd.stepsDone++ );
 	interrupts();
 }
-/// Imposta la velocità del clock motori limitandola tra
-/// quella minima ROBOT_MOTOR_CLOCK_microsecondMAX
-/// e quella massima ROBOT_MOTOR_CLOCK_microsecondMIN
+// Imposta la velocità del clock motori limitandola tra
+// quella minima ROBOT_MOTOR_CLOCK_microsecondMAX
+// e quella massima ROBOT_MOTOR_CLOCK_microsecondMIN
+// usa tone() che fa uso di timer2
+// ricordardi poi di usare noTone()
 void robot_c::_motorSetPWMCK(motCk_t clock )
 {
 	// controlla che il clock sia entro i limiti
@@ -1031,20 +1029,20 @@ void robot_c::_motorSetPWMCK(motCk_t clock )
 		this->status.cmd.clock =clock;	//ok > registro il nuovo valore di clock
 	};
 
-	
+	/*	tentativi falliti
 	//dbg( "1,ck:", this->status.cmd.clock );
 
 	// 2/7/15 abbandonato timer 3 perchè interferisce con ISR su pin2 dell'encoder
 	//Timer3.initialize( status.cmd.clock );	//Timer3 agisce sui pin 2,3,5
 	//analogWrite(Pin_MotCK,128);
 
-	/*	
+	
 
 	// 14-9-2015 così non funziona neppure moveCm() ----------------
-	FrequencyTimer2::setPeriod(status.cmd.clock/2);	//FrequencyTimer2::setPeriod((unsigned long)status.cmd.clock);
-	FrequencyTimer2::enable();
-	analogWrite(Pin_MotCK,128);
-*/
+	//FrequencyTimer2::setPeriod(status.cmd.clock/2);	//FrequencyTimer2::setPeriod((unsigned long)status.cmd.clock);
+	//FrequencyTimer2::enable();
+	//analogWrite(Pin_MotCK,128);
+
 
 	//unsigned long mS;
 	//mS = this->status.cmd.clock / 1000;
@@ -1058,11 +1056,15 @@ void robot_c::_motorSetPWMCK(motCk_t clock )
 	// questo funziona ma non so come attaccarci una mia ISR (già usato da Tone)
 	//unsigned int Hz;
 	// non ha più dato errore di compilazione rimuovendo dal main #include  <FrequencyTimer2\FrequencyTimer2.h>	
+	//noTone(Pin_MotCK);
+
+*/
+
 	unsigned int Hz = (unsigned int)(1000000.0 / this->status.cmd.clock);
 	tone(Pin_MotCK,Hz);//funziona  (usa il timer2)
 	//Serial.print( "1," ); Serial.print( Hz ); Serial.println( "Hz;" );
 	//pwmWrite( Pin_MotCK, Hz );
-
+	
 };
 void robot_c::_motorSetCkPulseDelay( motCk_t clock )
 {
@@ -1099,7 +1101,7 @@ void robot_c::_motorAccelerate(){
 
 					_ck -= this->status.cmd.acceleration ; //riduco gli intervalli in microsecondi
 					#if  DEBUG
-						dbg1("1,AccPh:");
+						MSG("1,AccPh:");
 					#endif
 					// limito entro la velocità  target
 					if ((_ck  < this->status.cmd.targetCK) || (_ck <= ROBOT_MOTOR_CLOCK_microsecondMIN))
@@ -1111,7 +1113,7 @@ void robot_c::_motorAccelerate(){
 						//memorizzo gli step fatti, per stabilire quando iniziare la decelerazione
 						this->status.cmd.accelSteps = this->status.cmd.stepsDone;
 						#if  DEBUG
-							dbg1( "1,ConstPh:" );
+							MSG( "1,ConstPh:" );
 						#endif
 					}
 
@@ -1121,7 +1123,7 @@ void robot_c::_motorAccelerate(){
 					// entro in fase di decelerazione
 					this->status.cmd.accelPhase = -1;
 					#if  DEBUG
-						dbg1( "1,DecelPh:" );
+						MSG( "1,DecelPh:" );
 					#endif
 					// Serial.print("ACC-1,"); Serial.println(this->status.cmd.stepsDone);
 				}
@@ -1133,7 +1135,7 @@ void robot_c::_motorAccelerate(){
 					// decelerazione
 					this->status.cmd.accelPhase = -1;
 					#if  DEBUG
-						dbg1( "1,DecelPh:" );
+						MSG( "1,DecelPh:" );
 					#endif
 
 				}
@@ -1146,6 +1148,19 @@ void robot_c::_motorAccelerate(){
 				break;
 		}
 	}
+
+/// ///////////////////////////////////////////////////////////////////////
+// decelera
+// parte da 1 e termina quando la velocità ha raggiunto quella desiderata targetSpeed o quando supero la metà degli step da fare
+//////////////////////////////////////////////////////////////////////////
+void robot_c::_motorDecelerate(int decelerationFactor){
+
+	motCk_t _ck = this->status.cmd.clock;
+	this->status.cmd.acceleration = ROBOT_MOTOR_CLOCK_DECEL*decelerationFactor;  //aumento la decelerazione
+	_ck += this->status.cmd.acceleration;
+	this->_motorSetCkPulseDelay( _ck );	// aggiorno la velocità
+}
+
 //Versione che calcola il CK senza assegnarlo
 motCk_t robot_c::_motorComputeStepDelay( motCk_t CurrentStepDelay ){
 	motCk_t NewStepDelay = 0;
@@ -1208,9 +1223,9 @@ motCk_t robot_c::_motorComputeStepDelay( motCk_t CurrentStepDelay ){
 }
 /// ///////////////////////////////////////////////////////////////////////
 //  movimento avanti o indietro con feedback da encoders
-//  ritorna i cm percorsi
+//  ritorna i mm percorsi
 //////////////////////////////////////////////////////////////////////////
-int robot_c::moveCm( int cm )
+uint16_t robot_c::moveCm( int cm )
 {
 	if (cm >=0)
 	{	this->status.cmd.commandDir = GOF;}	//usato da ObstacleFree()	
@@ -1243,10 +1258,10 @@ int robot_c::moveCm( int cm )
 
 	// Controllo assenza ostacolo con IRproxy  -------------------
 
-	if (!this->obstacleFree()) {		//if (0) {		// 
+	if (!this->isObstacleFree()) {		//if (0) {		// 
 		status.cmd.enL =false;
 		status.cmd.enR = false;
-		SPEAK_OIOI
+		//SPEAK_OIOI
 		
 			
 		// disattivo i motori-------------------
@@ -1254,14 +1269,14 @@ int robot_c::moveCm( int cm )
 		digitalWriteFast( Pin_MotENR, !ROBOT_MOTORENABLE_ACTIVE );
 		digitalWriteFast( Pin_MotENL, !ROBOT_MOTORENABLE_ACTIVE );
 		
-		SERIAL_MSG.println( "1,***command aborted. Obstacle found;" );
+		//SERIAL_MSG.println( "1,***command aborted. Obstacle found;" );
 
 		return 0;
 	} 
 	else ///ok posso muovermi --------------------------
 	{
 
-		SERIAL_MSG.println( "\n1,Moving...;" );
+		MSG( "Moving..." );
 	
 
 		//Abilito i motori ---------------------
@@ -1307,8 +1322,7 @@ int robot_c::moveCm( int cm )
 		//--------------------------------------------------
 
 		// attivo i motori-------------------
-		digitalWriteFast(Pin_MotENR, ROBOT_MOTORENABLE_ACTIVE);
-		digitalWriteFast(Pin_MotENL, ROBOT_MOTORENABLE_ACTIVE);
+		MOTORS_ENABLE
 		//-------------------------------
 
 
@@ -1318,6 +1332,7 @@ int robot_c::moveCm( int cm )
 		// imposto il clock TARGET motori-------------------------------------------------------
 		//status.cmd.targetCK=(int)ROBOT_MOTOR_CLOCK_PER_CMs/ status.cmd.targetSpeed;
 		status.cmd.targetCK = ROBOT_MOTOR_CLOCK_microsecondMIN;
+
 		// inizializzo  accelerazione-----------
 		status.cmd.accelPhase = 1;
 		//-----------------------------------------------------------------------------
@@ -1338,7 +1353,8 @@ int robot_c::moveCm( int cm )
 		//---------------------------------------------------------
 		// loop di accelerazione
 		//------------------------------------------------------
-		while ((this->status.cmd.stepsDone <= this->status.cmd.targetSteps) && this->obstacleFree())
+		osalSysDisable();
+		while ((this->status.cmd.stepsDone <= this->status.cmd.targetSteps) && this->isObstacleFree())
 		{
 			_motorCKpulse();
 
@@ -1348,7 +1364,7 @@ int robot_c::moveCm( int cm )
 			//stepDelay = _motorComputeStepDelay( status.cmd.clock );
 #if  DEBUG 
 			//attenzione!! se attivo viene rallentato sensibilmente  il movimento !!
- 			dbg2( "ck:", status.cmd.clock );
+			dbg2( "ck:", status.cmd.clock );
 #endif	
 			//status.cmd.clock = stepDelay;// _motorSetCKspeed( stepDelay );
 			delayMicroseconds( status.cmd.clock );
@@ -1356,9 +1372,32 @@ int robot_c::moveCm( int cm )
 		//////////////////////////////////////////////////////////////////////////
 		//////////////////////////////////////////////////////////////////////////
 
-		// step completati oppure ostacolo -----------------
-		robot.stop();
 
+
+		if (this->status.cmd.stepsDone == this->status.cmd.targetSteps)
+		{
+			// step completati 
+			stop();
+
+		}
+		else //ostacolo
+		{
+			// /////////////////
+			// GESTIONE ostacolo 
+			////////////////////
+			if (!isObstacleFreeBumpers())
+			{
+				//se sono i bumper mi fermo immediatamente
+				stop();
+			}
+			else //ostacolo solo IR
+			{
+				softStop();
+			}
+			
+		}
+
+		osalSysEnable();
 
 		#if DEBUG
 			dbg2("End Loop stepsDone:" , status.cmd.stepsDone);
@@ -1368,7 +1407,8 @@ int robot_c::moveCm( int cm )
 			#endif
 		#endif		
 
-		int cmPercorsi = (int)(status.cmd.stepsDone / ROBOT_MOTOR_STEPS_PER_CM);
+		//int cmPercorsi = (int)(status.cmd.stepsDone / ROBOT_MOTOR_STEPS_PER_CM);
+		uint16_t mmPercorsi =10* (uint16_t)(status.cmd.stepsDone / ROBOT_MOTOR_STEPS_PER_CM);
 
 
 		//-----------------------------------------------------------
@@ -1379,7 +1419,7 @@ int robot_c::moveCm( int cm )
 //		pushPathHistory(status.cmd.commandDir, cmPercorsi);
 //		updatePose(cmPercorsi, 0);// update Robot position
 
-		return cmPercorsi;
+		return mmPercorsi;
 	};
 	
 }	// end move
@@ -1392,16 +1432,16 @@ long robot_c::rotateSteps(long steps)
 	if (steps >=0) 	{status.cmd.commandDir = GOR;}	//usato da ObstacleFree()
 		else		{status.cmd.commandDir = GOL;}
 	
-	if (!this->obstacleFree()) {		//if (0) {		// 
+	if (!this->isObstacleFree()) {		//if (0) {		// 
 		status.cmd.enL = false;
 		status.cmd.enR = false;
-		SPEAK_OIOI
+		//SPEAK_OIOI
 		// disattivo i motori-------------------
 		digitalWriteFast( Pin_MotENR, !ROBOT_MOTORENABLE_ACTIVE );
 		digitalWriteFast( Pin_MotENL, !ROBOT_MOTORENABLE_ACTIVE );
 
-		
-		dbg( "1,***command aborted. Obstacle found;" );
+ 
+		MSG( "Obst!" );
 		
 		return 0;
 	}
@@ -1412,7 +1452,7 @@ long robot_c::rotateSteps(long steps)
 		this->status.cmd.targetSteps = abs(steps);
  
 		// to do: Modulo 2PI
-		dbg2( "1,Target steps: ", this->status.cmd.targetSteps );
+		//MSG2( "Target steps: ", this->status.cmd.targetSteps );
 		
 		//-------------------------------------------------
 
@@ -1469,7 +1509,8 @@ long robot_c::rotateSteps(long steps)
 		// ACCELERATION LOOP finchè step fatti<step programmati o presenza ostacolo
 		//////////////////////////////////////////////////////////////////////////
 		//////////////////////////////////////////////////////////////////////////
-		while ((this->status.cmd.stepsDone <= this->status.cmd.targetSteps) && this->obstacleFree()){
+		osalSysDisable(); //disabilita Interupt
+		while ((this->status.cmd.stepsDone <= this->status.cmd.targetSteps) && this->isObstacleFree()){
 
 			_motorCKpulse();
 
@@ -1478,7 +1519,7 @@ long robot_c::rotateSteps(long steps)
 
 			//stepDelay = _motorComputeStepDelay( status.cmd.clock );
 			#if  DEBUG 
-						dbg( "ck:", status.cmd.clock );
+				MSG( "ck:", status.cmd.clock );
 			#endif	
 			//status.cmd.clock = stepDelay;// _motorSetCKspeed( stepDelay );
 			delayMicroseconds( status.cmd.clock );
@@ -1525,18 +1566,19 @@ long robot_c::rotateSteps(long steps)
 
 
 		}// end while
+		osalSysEnable(); //disabilita Interupt
 
 	}
 	// step completati oppure ostacolo -----------------
 	robot.stop();
  
-	dbg2( "End Loop stepsDone:", status.cmd.stepsDone );
+	MSG2( "End Loop stepsDone:", status.cmd.stepsDone );
 	#if DEBUG_ENCODERS
 		//-- visualizzo i risultati -----------------------------------
-		dbg2("Step percorsi: L:" ,status.EncL)
-		dbg2(", R:" ,status.EncR)
+		MSG2("Step percorsi: L:" ,status.EncL)
+		MSG2(", R:" ,status.EncR)
 	#endif
- 	
+	
 	//-----------------------------------------------------------
 
 	// ritorno step percorsi ----------------------------------------------- 
@@ -1555,7 +1597,7 @@ float robot_c::rotateRadiants(float rad)
 		status.cmd.commandDir = GOL;
 	}
 	
-	if (!this->obstacleFree()) {		//if (0) {		// 
+	if (!this->isObstacleFree()) {		//if (0) {		// 
 		status.cmd.enL = false;
 		status.cmd.enR = false;
 		// disattivo i motori-------------------
@@ -1579,7 +1621,7 @@ float robot_c::rotateRadiants(float rad)
 		}
 		// to do: Modulo 2PI
 		#if  DEBUG 
-			dbg( "1,Target steps: ", this->status.cmd.targetSteps );
+			MSG2( "Target steps: ", this->status.cmd.targetSteps );
 		#endif
 		//-------------------------------------------------
 
@@ -1637,7 +1679,7 @@ float robot_c::rotateRadiants(float rad)
 		// ACCELERATION LOOP finchè step fatti<step programmati o presenza ostacolo
 		//////////////////////////////////////////////////////////////////////////
 		//////////////////////////////////////////////////////////////////////////
-		while ((this->status.cmd.stepsDone <= this->status.cmd.targetSteps) && this->obstacleFree()){
+		while ((this->status.cmd.stepsDone <= this->status.cmd.targetSteps) && this->isObstacleFree()){
 
 			_motorCKpulse();
 
@@ -1646,7 +1688,7 @@ float robot_c::rotateRadiants(float rad)
 
 			//stepDelay = _motorComputeStepDelay( status.cmd.clock );
 			#if  DEBUG 
-						dbg( "ck:", status.cmd.clock );
+				MSG2( "ck:", status.cmd.clock );
 			#endif	
 			//status.cmd.clock = stepDelay;// _motorSetCKspeed( stepDelay );
 			delayMicroseconds( status.cmd.clock );
@@ -1698,11 +1740,11 @@ float robot_c::rotateRadiants(float rad)
 	// step completati oppure ostacolo -----------------
 	robot.stop();
 	#if DEBUG
-		dbg( "End Loop stepsDone:", status.cmd.stepsDone );
+		MSG2( "End Loop stepsDone:", status.cmd.stepsDone );
 		#if DEBUG_ENCODERS
 			//-- visualizzo i risultati -----------------------------------
-			Serial.print("Step percorsi: L:" ); Serial.print(status.EncL);
-			Serial.print(", R:" ); Serial.println(status.EncR);
+			MSG2("Step percorsi: L:" ,status.EncL);
+			MSG2("Step percorsi: R:" , status.EncR);
 		#endif
 	#endif	
 	//-----------------------------------------------------------
@@ -1731,12 +1773,41 @@ int robot_c::rotateDeg( int deg ){
 
 
 }
+//ruota fino all'angolo h+-err  (bloccante)
+void robot_c::rotateHeading(int h, int maxErr) {
+	int err= h- this->_pCompass->getBearing();
+	while (abs(err) > maxErr)
+	{
+		if (err>0)
+		{
+			robot.go(commandDir_e::GOR, robotSpeed_e::MEDIUM);
+		}
+		else
+		{
+			robot.go(commandDir_e::GOL, robotSpeed_e::MEDIUM);
+
+		}
+		err= h- this->_pCompass->getBearing();
+		//MSG2("Err:",err)
+	}
+	robot.stop();
+
+}
+/////////////////////////////////////////////////
+// Disabilita gli avvolgimenti dei motori
 void robot_c::motorsOnOff( bool On ){
 	digitalWriteFast( Pin_MotENL, On );
 	digitalWriteFast( Pin_MotENR, On );
 }
-//abilita i motori e il clock via Timer
-void robot_c::_go(motCk_t clock)
+
+////////////////////////////////////////////////////////
+// 1)Imposta direzione definita in status.cmd
+// 2) Abilita i motori
+// 3) Loop di impulsi di clock finchè non c'è ostacolo
+// Nota: non viene usato alcun timer ,ma  è bloccante 
+//       perchè c'è il loop di controllo ostacoli
+////////////////////////////////////////////////////////
+void robot_c::_goUntillObstacle(motCk_t clock)
 {	//trasferisce i comandi alle porte di I/O
 	//disabilito i motori
 	//motorsOnOff( 0 );
@@ -1753,31 +1824,68 @@ void robot_c::_go(motCk_t clock)
 
 
 	/* così non va bene perchè non accetta i nuovi comandi*/
-	while ( this->obstacleFree())
+	while ( this->isObstacleFree())
 	{ 
+		status.isMoving = true;	// segnala che si sta muovendo
 
 		_motorCKpulse();		
 		_motorAccelerate();// accelera o decelera in base agli step percorsi
 		delayMicroseconds( status.cmd.clock );
 	}// end while
-	
+	stop();
 
 };
+// imposta solamente status.cmd.cwL e status.cmd.cwR
+void robot_c::_setMotorDir(commandDir_e dir) {
+	status.cmd.commandDir = dir;
+	switch (dir)
+	{
+	case GOF:
+		status.cmd.cwL = true;
+		status.cmd.cwR = false;
+		break;
+	case GOB:
+		status.cmd.cwL = false;
+		status.cmd.cwR = true;
+		break;
+	case GOR:
+		status.cmd.cwL = true;
+		status.cmd.cwR = true;
+		break;
+	case GOL:
+		status.cmd.cwL = false;
+		status.cmd.cwR = false;
+		break;
+	case STOP:
+	default:
+		break;
+	}
+	if (status.cmd.cwR)
+	{
+		digitalWriteFast(Pin_MotCWR, ROBOT_MOTORCW_ACTIVE);	//LOW = CW	(ok)
+	}
+	else
+	{
+		digitalWriteFast(Pin_MotCWR, !ROBOT_MOTORCW_ACTIVE);	//LOW = CW	(ok)
+	}
+	if (status.cmd.cwL)
+	{
+		digitalWriteFast(Pin_MotCWL, ROBOT_MOTORCW_ACTIVE);	//LOW = CW	(ok)
+	}
+	else
+	{
+		digitalWriteFast(Pin_MotCWL, !ROBOT_MOTORCW_ACTIVE);	//LOW = CW	(ok)
+	}
 
-void robot_c::stop(){
-		status.cmd.commandDir =STOP;
-		status.cmd.enL= 0;
-		status.cmd.enR=0;
-		digitalWriteFast( Pin_MotENL, !ROBOT_MOTORENABLE_ACTIVE );
-		digitalWriteFast( Pin_MotENR, !ROBOT_MOTORENABLE_ACTIVE );
+ 
+}
 
-};
 /// goFW,goBK,goCCW,goCC non devono essere bloccanti
 void robot_c::goFW(motCk_t clock){
 //		EncL.write(0);EncR.write(0);// inizializzo gli encoder
 		status.cmd.commandDir =GOF;
 		status.sensors.irproxy.fw = digitalReadFast(Pin_irproxy_FW); //demandato al metodo robot.readSensors() chiamato da task
-		if (this->obstacleFree()==false) {
+		if (!isObstacleFree()) {
 			status.cmd.enL =false;
 			status.cmd.enR =false;
 		} else {
@@ -1786,6 +1894,7 @@ void robot_c::goFW(motCk_t clock){
 			status.cmd.cwL =true;	// imposto la direzione
 			status.cmd.cwR = false;
 			_motorSetPWMCK( clock );
+			status.isMoving = true;	// segnala che si sta muovendo
 		}
 	};
 void robot_c::goBK(motCk_t clock){
@@ -1793,7 +1902,7 @@ void robot_c::goBK(motCk_t clock){
 
 		status.cmd.commandDir =GOB;
 		
-		if (this->obstacleFree()==false) {
+		if (!isObstacleFree()) {
 			status.cmd.enL =false;
 			status.cmd.enR =false;
 		} else {	
@@ -1803,6 +1912,7 @@ void robot_c::goBK(motCk_t clock){
 			status.cmd.cwR = true;
 
 			_motorSetPWMCK( clock );
+			status.isMoving = true;	// segnala che si sta muovendo
 		}
 	};
 void robot_c::goCCW(motCk_t clock){
@@ -1815,6 +1925,7 @@ void robot_c::goCCW(motCk_t clock){
 		status.cmd.cwR = false;
 
 		_motorSetPWMCK( clock );
+		status.isMoving = true;	// segnala che si sta muovendo
 	};
 void robot_c::goCW(motCk_t clock){
 //			EncL.write(0);EncR.write(0);// inizializzo gli encoder
@@ -1826,30 +1937,119 @@ void robot_c::goCW(motCk_t clock){
 		status.cmd.cwR = true;
 
 		_motorSetPWMCK( clock );
+		status.isMoving = true;	// segnala che si sta muovendo
 	};
 
+////////////////////////////////////////////////////////////////////
+// mette in moto nella direzione specificata senza loop
+// NON BLOCCANTE
+// La procedura chiamante deve poi: 
+//  a) controllare gli ostacoli in continuazione 
+//  b) chiamare stop()
+////////////////////////////////////////////////////////////////////
+void robot_c::go(commandDir_e dir, int speed) {
+	_setMotorDir(dir);	
+	
+	_motorSetPWMCK((motCk_t)speed);
+	status.isMoving = true;	// segnala che si sta muovendo
+	MOTORS_ENABLE
+}
+//////////////////////////////////////////////////////
+// Ferma i motori disabilitando gli avvolgimenti
+void robot_c::stop(){
+		status.cmd.commandDir =STOP;
+		status.cmd.enL= 0;
+		status.cmd.enR=0;
+		digitalWriteFast( Pin_MotENL, !ROBOT_MOTORENABLE_ACTIVE );
+		digitalWriteFast( Pin_MotENR, !ROBOT_MOTORENABLE_ACTIVE );
+		noTone(Pin_MotCK);
+		status.isMoving = false;	// segnala che si sta muovendo
+};
+//////////////////////////////////////////////////////
+// Ferma i motori con una decelerazione
+void robot_c::softStop(){
+	int dec = 10;
+	for (size_t i = status.cmd.clock; i > ROBOT_MOTOR_CLOCK_microsecondMAX; i+=dec)
+	{
+		_motorCKpulse();
+		_motorSetCkPulseDelay(i);
+		delayMicroseconds(status.cmd.clock);
+
+	}
+	//while ((this->status.cmd.stepsDone <= this->status.cmd.targetSteps) && this->isObstacleFreeBumpers())
+	//{
+	//	_motorCKpulse();
+
+	//	// accelera o decelera in base agli step percorsi
+	//	_motorDecelerate(dec++);
+
+	//	//stepDelay = _motorComputeStepDelay( status.cmd.clock );
+
+	//	//status.cmd.clock = stepDelay;// _motorSetCKspeed( stepDelay );
+	//	delayMicroseconds(status.cmd.clock);
+	//}// end while
+	stop(); //alla fine si ferma
+};
+
+////////////////////////////////////////////////////////////////////
+// Se non ci sono ostacoli
+// Imposta la direzione (status.cmd.enL/R)
+// imposta  in base alla direzione
+// Nota: è bloccante per il loop di controllo ostacoli in _goUntillObstacle()
+//////////////////////////////////////////////////////////////////
+void robot_c::moveUntillObstacle(commandDir_e dir, robotSpeed_e speed) {
+	status.cmd.commandDir = dir;
+	status.sensors.irproxy.fw = digitalReadFast(Pin_irproxy_FW); //demandato al metodo robot.readSensors() chiamato da task
+	if (!this->isObstacleFree()) {
+		status.cmd.enL = false;
+		status.cmd.enR = false;
+	}
+	else {
+		_setMotorDir(dir);
+		status.cmd.clock = (motCk_t)speed;
+		//_motorSetPWMCK((motCk_t)speed);
+		status.cmd.enL = true;	// abilito i driver dei due motori
+		status.cmd.enR = true;	//
+		_goUntillObstacle((motCk_t)speed);		// imposto la velocità iniziale alla velocità minima
+
+	}
+}
 /// ///////////////////////////////////////////////////////////////////////
 //  Esegue la lettura dei sensori :irproxy , pirDome, analog, rele
 /// ///////////////////////////////////////////////////////////////////////
-void robot_c::readGps() {
-	while (SERIAL_GPS.available() > 0)	Gps.encode(SERIAL_GPS.read());
-	if (Gps.location.isUpdated()) {
-		status.sensors.gps.sats = Gps.satellites.value();
-		status.sensors.gps.lat = Gps.location.lat();
-		status.sensors.gps.lng = Gps.location.lng();
-		status.sensors.gps.alt = Gps.altitude.meters();
-		status.sensors.gps.homeDistCm = Gps.distanceBetween(status.sensors.gps.lat, status.sensors.gps.lng, GPSHOME_LAT, GPSHOME_LNG);
-		status.sensors.gps.homeAngleDeg =Gps.courseTo(status.sensors.gps.lat, status.sensors.gps.lng, GPSHOME_LAT, GPSHOME_LNG);
-	}
-}
+#if OPT_GPS
+	void robot_c::readGps() {
+		//dbg("1,readGps()....;")
+		if (SERIAL_GPS.available() > 0)
+		{
+			while (SERIAL_GPS.available() > 0)	_pGps->encode(SERIAL_GPS.read());
+			if (_pGps->location.isUpdated()) {
+				//dbg(".gps")
+				status.sensors.gps.sats = _pGps->satellites.value();
+				status.sensors.gps.lat = _pGps->location.lat();
+				status.sensors.gps.lng = _pGps->location.lng();
+				status.sensors.gps.alt = _pGps->altitude.meters();
+				status.sensors.gps.homeDistCm = _pGps->distanceBetween(status.sensors.gps.lat, status.sensors.gps.lng, GPSHOME_LAT, GPSHOME_LNG);
+				status.sensors.gps.homeAngleDeg = _pGps->courseTo(status.sensors.gps.lat, status.sensors.gps.lng, GPSHOME_LAT, GPSHOME_LNG);
+ 
+				status.pendingEvents.gps = true;
+				 
 
-/// ///////////////////////////////////////////////////////////////////////
+			}
+
+		}
+	}
+
+#endif // OPT_GPS
+
+
+// ////////////////////////////////////////////////////////////////////////
 // Esegue la lettura di tutti i sensori,
 // memorizza i valori in 'status'
 // memorizzando i valori precedenti in 'statusOld'
 // richiede che i puntatori agli oggetti Sonar, Servo LDS e GPS siano stati impostati
-/// ///////////////////////////////////////////////////////////////////////
-void robot_c::readSensors(){
+// ////////////////////////////////////////////////////////////////////////
+void robot_c::readAllSensors(){
 
 	statusOld = status;
 
@@ -1863,26 +2063,85 @@ void robot_c::readSensors(){
 	status.sensors.analog[Pin_AnaPot1-Pin_AnaBase]	= analogRead(Pin_AnaPot1);	//A0 potenziometro  //116 uS per la lettura
 	status.sensors.analog[Pin_AnaVbat-Pin_AnaBase]	= analogRead(Pin_AnaVbat);	// A1 Vbat
 	status.sensors.analog[Pin_AnaLight-Pin_AnaBase]= analogRead(Pin_AnaLight);	// A2 Luce
-	status.posCurrent.r = readCompassDeg();
+
+	#if OPT_GPS
+		readGps();
+	#endif // 	OPT_GPS
+ 
+	#if OPT_COMPASS
+		status.posCurrent.r = readCompassDeg();
+	#endif // 	OPT_COMPASS
+
+
+	//status.ts = millis();
+	//if (status.sensors.switchTop ==1)
+	//{
+	//	status.operatingMode = MODE_AUTONOMOUS;
+	//}
+	//else
+	//{
+	//	status.operatingMode = MODE_SLAVE;
+
+	//}
+	//dbg("1,readAllSensors()....END;")
+
+};
+// ///////////////////////////////////////////////////////////////////////
+// legge i sensori IRproxy, bumpers, compass ,PIR, laser, switch top. esclusi: GPS
+// ///////////////////////////////////////////////////////////////////////
+void robot_c::readSensorsHR(){
+	//dbg("1,readSensorsHR()....BEGIN;")
+
+	statusOld = status;
+
+	readIrProxySensors();
+	readBumpers();
+
+	status.act.laserOn = digitalReadFast(Pin_LaserOn);
+	status.sensors.pirDome = digitalReadFast( Pin_PIR1 );
+
+	#if OPT_COMPASS
+		status.posCurrent.r = readCompassDeg();
+	#endif // 	OPT_COMPASS
+
+
+
+	raiseEvents();
+
+};
+///////////////////////////////////////////////////
+// Legge sensori: GPS, Rele, Switch top
+///////////////////////////////////////////////////
+void robot_c::readSensorsLR(){
+	//dbg("1,readSensorsLR()....BEGIN;")
+
+	statusOld = status;
+
 	readGps();
-//	status.posCurrent.r = readCompassDeg();
+ 
 
-#if 	OPT_COMPASS
-#endif // 	OPT_COMPASS
-//	status.posCurrent.r = readCompassDeg();
+	status.sensors.analog[Pin_AnaPot1-Pin_AnaBase]	= analogRead(Pin_AnaPot1);	//A0 potenziometro  //116 uS per la lettura
+	status.sensors.analog[Pin_AnaVbat-Pin_AnaBase]	= analogRead(Pin_AnaVbat);	// A1 Vbat
+	status.sensors.analog[Pin_AnaLight-Pin_AnaBase]= analogRead(Pin_AnaLight);	// A2 Luce
+
+	status.act.rele[0]		= getReleStatus(0);
+	status.act.rele[1]		= getReleStatus(1);
 
 
+	raiseEvents();
 
 	status.ts = millis();
-	if (status.sensors.switchTop ==1)
-	{
-		status.operatingMode = MODE_AUTONOMOUS;
-	}
-	else
-	{
-		status.operatingMode = MODE_SLAVE;
+	//if (status.sensors.switchTop ==1)
+	//{
+	//	status.operatingMode = MODE_AUTONOMOUS;
+	//}
+	//else
+	//{
+	//	status.operatingMode = MODE_SLAVE;
 
-	}
+	//}
+	////dbg("1,readSensorsHR()....END;")
+
 };
 	//
 void robot_c::readIrProxySensors(){
@@ -1891,13 +2150,46 @@ void robot_c::readIrProxySensors(){
 	status.sensors.irproxy.bk = !digitalReadFast( Pin_irproxy_BK );
 	status.sensors.irproxy.fr = !digitalReadFast( Pin_irproxy_FR );
 	status.sensors.irproxy.fl = !digitalReadFast( Pin_irproxy_FL );
-
+	//if (status.sensors.irproxy.fw != statusOld.sensors.irproxy.fw)
+	//{
+	//	status.pendingEvents.irproxyF = true;
+	//}
+	//if (status.sensors.irproxy.bk != statusOld.sensors.irproxy.bk)
+	//{
+	//	status.pendingEvents.irproxyB = true;
+	//}
+	//if (status.sensors.irproxy.fr != statusOld.sensors.irproxy.fr)
+	//{
+	//	status.pendingEvents.irproxyR = true;
+	//}
+	//if (status.sensors.irproxy.fl != statusOld.sensors.irproxy.fl)
+	//{
+	//	status.pendingEvents.irproxyL = true;
+	//}
+	raiseEvents();
 
 	};
 void robot_c::readBumpers(){
 	status.sensors.bumper.right = !digitalReadFast(Pin_BumbRight);
 	status.sensors.bumper.center = !digitalReadFast(Pin_BumbCenter);
 	status.sensors.bumper.left = !digitalReadFast(Pin_BumbLeft);
+
+	// Solleva gli eventi ------------------------------------------
+	raiseEvents();
+	//if (status.sensors.bumper.right != statusOld.sensors.bumper.right)
+	//{
+ //		status.pendingEvents.bumperR = true;
+	//}
+	//if (status.sensors.bumper.center != statusOld.sensors.bumper.center)
+	//{
+ //		status.pendingEvents.bumperF = true;
+	//}
+	//if (status.sensors.bumper.left != statusOld.sensors.bumper.left)
+	//{
+ //		status.pendingEvents.bumperL = true;
+	//}
+
+
 	};
 //int robot_c::ping_cm() {
 //	digitalWriteFast( Pin_SonarTrig, LOW );
@@ -1978,7 +2270,7 @@ motCk robot_c::speedToCK(float cmPerSecond){
 ///  ritorna true se i sensori sono alimentati   
 ///////////////////////////////////////////////////////////////////////////////////////
 bool robot_c::isPowerOn(){
-	this->readSensors();
+	this->readAllSensors();
 	//dbg("status.analog[1]  %d ",(int)this->status.analog[1]);	
 	//dbg("status.sensors.irproxy.fw  %d ",(int)this->status.sensors.irproxy.fw);
 	//dbg("status.sensors.irproxy.fwHL  %d ",(int)this->status.sensors.irproxy.fwHL);
@@ -2023,34 +2315,33 @@ int robot_c::readBattChargeLevel(){
 	//A1_Voltage = ADCValue * ADCconversionFactor ; //Vbat 13.9 >> Va1 = 4,7v >> ADC =1018
 
 	Vbat=  this->status.sensors.analog[Pin_AnaVbat-Pin_AnaBase]  * ADV2Vbat;
-
 	int c;
 	c=0;
   if (Vbat > 12.9){ //2.15v  per elemento = 100%
-    c=  100 ;
-    }else
-      if (Vbat > 12.6) { //2.1v  per elemento = 80%
-        c=80;
-        }else 
-          if (Vbat > 12.3) { //2.05v  per elemento = 60%
-            c=60;
-          }else 
-            if (Vbat > 12.18) { //2.03v  per elemento = 50%
-              c=50;
-             }else 
-                if (Vbat > 11.88) { //1.983v  per elemento = 40%
-                  c=40;
-                  }else 
-                    if (Vbat > 11.7) { //1.983v  per elemento = 30%
-                      c=30;
-                      }else 
-                        if (Vbat > 11.46) { //1.913v  per elemento = 20%
-                          c=20;
-                         }else 
-                             if (Vbat > 11.1) { //1.853v  per elemento = 10%
-                                c=10;
-                             }else 
-                                c=0;
+	c=  100 ;
+	}else
+	  if (Vbat > 12.6) { //2.1v  per elemento = 80%
+		c=80;
+		}else 
+		  if (Vbat > 12.3) { //2.05v  per elemento = 60%
+			c=60;
+		  }else 
+			if (Vbat > 12.18) { //2.03v  per elemento = 50%
+			  c=50;
+			 }else 
+				if (Vbat > 11.88) { //1.983v  per elemento = 40%
+				  c=40;
+				  }else 
+					if (Vbat > 11.7) { //1.983v  per elemento = 30%
+					  c=30;
+					  }else 
+						if (Vbat > 11.46) { //1.913v  per elemento = 20%
+						  c=20;
+						 }else 
+							 if (Vbat > 11.1) { //1.853v  per elemento = 10%
+								c=10;
+							 }else 
+								c=0;
 	return c;
 }
 
@@ -2067,7 +2358,7 @@ int robot_c::readBattChargeLevel(){
 void robot_c::runIBIT( int delayms )
 {
 
-	SPEAK_TEST
+
 
 	#define TestDist 10
 	blinkLed( Pin_LaserOn, 1000 );
@@ -2084,30 +2375,30 @@ void robot_c::runIBIT( int delayms )
 	this->setRele(2,0);
 	delay(delayms);
 
-	//-----------------------------------------
+	///-----------------------------------------
 	// Swwep di Test del  Servo
-	//----------------------------------------- 
-	if (_pServoSonar != 0)
+	///----------------------------------------- 
+	if (this->_pServoSonar != 0)
 	{
 		LASER_ON
 		delay( 500 );
-		SERIAL_MSG.print( F("1,test Servo 0-180-90;") );
-		_pServoSonar->attach( Pin_ServoSonarPWM );
+		MSG("test Servo 0-180-90 " );
+		this->_pServoSonar->attach( Pin_ServoSonarPWM );
 
 		SPEAK("servo")
-		_pServoSonar->write( 0 );	// angolo in gradi se < 360
+		this->_pServoSonar->write( 0 );	// angolo in gradi se < 360
 		delay( 500 );
-		_pServoSonar->write( 180 );
+		this->_pServoSonar->write( 180 );
 		delay( 200 );
-		_pServoSonar->write( 90 );
+		this->_pServoSonar->write( 90 );
 		_pServoSonar->detach();
 		delay( 200 );
 		int d = 0;
-		SERIAL_MSG.println("1,testing Laser Distance sensor...;");
+		MSG("testing LDS...;");
 		for (byte i = 0; i < 10; i++)
 		{
-			d = robot_c::getLDSDistance( );
-			SERIAL_MSG.print("  distance: ");SERIAL_MSG.println(d);
+			d = this->getLDSDistance( );
+			MSG3("dist.: ",d," cm");
 			delay( 500 );
 		}
 
@@ -2129,16 +2420,16 @@ void robot_c::runIBIT( int delayms )
 	}
 	else
 	{
-		SERIAL_MSG.print( "1, Error servo pointer is null!!;" );
+		SERIAL_MSG.println( F("1, Error servo pointer is null!!;") );
 	}
 
-	SERIAL_MSG.print( "1,test move FW ;" );
+	SERIAL_MSG.println(F( "1,test move FW ;") );
 	this->moveCm( TestDist );
 	delay(delayms);
 
 	blinkLed( Pin_LED_TOP, 500 );
 
-	SERIAL_MSG.print( "1,test move BK ;" );
+	SERIAL_MSG.println( F("1,test move BK ;") );
 	this->moveCm( -TestDist );
 	delay(delayms);
 
@@ -2174,55 +2465,94 @@ void robot_c::runIBIT( int delayms )
 	//
 //}
 
-///////////////////////////////////////////////////////////////////////////////////////
-/// Legge sensori di prossimità e ritorna true se non ci sono ostacoli nella direzione del moto
-///////////////////////////////////////////////////////////////////////////////////////
-bool robot_c::obstacleFree()
+/// /////////////////////////////////////////////////////////////////////////////////////
+//  Legge sensori di prossimità IR e ritorna true se non ci sono ostacoli nella direzione del moto
+// impostare ignoreIR a true per non considerare i sensori di prossimità che vengono abbagliati da luce del giorno
+bool robot_c::isObstacleFreeIR() {
+	bool isFree = true;
+
+	if (!status.sensors.ignoreIR)
 	{
-		bool isFree = true;
 		readIrProxySensors();
-		readBumpers();
 		if (this->status.cmd.commandDir == GOF)
 		{
 			// movimento in avanti, controllo avanti
 			if (this->status.sensors.analog[Pin_AnaLight - Pin_AnaBase] > 500)  //tanta luce
 			{
-				isFree = (!this->status.sensors.irproxy.fwHL) &&
-					(!this->status.sensors.bumper.center) && (!status.sensors.bumper.right) && (!status.sensors.bumper.left);
-						
-				if(!isFree){SPEAK("o") }
-				return isFree;
+				isFree = !this->status.sensors.irproxy.fwHL;
 			}
 			else  //poca luce
 			{
-				isFree = !this->status.sensors.irproxy.fw && !this->status.sensors.irproxy.fr && !this->status.sensors.irproxy.fl &&
-					(!this->status.sensors.bumper.center) && (!status.sensors.bumper.right) && (!status.sensors.bumper.left);
-				if (!isFree) { SPEAK("o") }
-				return isFree;
+				isFree = !this->status.sensors.irproxy.fw && !this->status.sensors.irproxy.fr && !this->status.sensors.irproxy.fl;
 			}
 
 		}
 		else// non sto andando in avanti
 		{
-			if (this->status.cmd.commandDir == GOB) 
+			if (this->status.cmd.commandDir == GOB)
 			{
 				// movimento indietro, controllo indietro
- 				isFree = !this->status.sensors.irproxy.bk;
-				if (!isFree) { SPEAK("o") }
-				return isFree;
-
+				isFree = !this->status.sensors.irproxy.bk;
 			}
-			else 
+			else
 			{	// CW o CCW
 				// in caso di rotazione fermo solo se entrambi i proxy anteriore e posteriore indicano ostacolo
- 
 				isFree = !(this->status.sensors.irproxy.fw && this->status.sensors.irproxy.bk);
-				if (!isFree) { SPEAK("o") }
-				return isFree;
-
 			}
-
 		}
+	}
+	else // come sopra ma senza IR
+		isFree = true;
+	//if (!isFree) { SPEAK("o") }
+	if (!isFree)
+	{
+		MSG("OBSTACLE")
+	}
+
+	return isFree;
+}
+
+
+/// /////////////////////////////////////////////////////////////////////////////////////
+//  Legge i Bumpers e ritorna true se non ci sono ostacoli nella direzione del moto
+bool robot_c::isObstacleFreeBumpers()	{
+	bool isFree = true;
+	readBumpers();
+	if (this->status.cmd.commandDir == GOF)
+	{
+		// movimento in avanti, controllo i bumper anteriori
+		isFree =(!this->status.sensors.bumper.center) && (!status.sensors.bumper.right) && (!status.sensors.bumper.left);
+	}
+	else// non sto andando in avanti
+	{
+		if (this->status.cmd.commandDir == GOB)
+		{
+			// movimento indietro, non ho per ora altri sensori
+			// uso pertanto l'IR
+			isFree = !this->status.sensors.irproxy.bk;
+		}
+		else// CW o CCW
+		{	
+			// in caso di rotazione fermo solo se entrambi i proxy anteriore e posteriore indicano ostacolo
+			isFree = true;
+		}
+
+	}
+	if (!isFree) { 
+		MSG("OBSTACLE")
+//		SPEAK("o") 
+	}
+	return isFree;
+
+}
+
+
+/// /////////////////////////////////////////////////////////////////////////////////////
+//  Legge i Bumpers e ritorna true se non ci sono ostacoli nella direzione del moto
+bool robot_c::isObstacleFree()	{
+	bool isFree = isObstacleFreeBumpers() && isObstacleFreeIR();
+	return isFree;
+
 }
 
 void robot_c::blinkLed( int port, int mSec )
@@ -2234,79 +2564,87 @@ void robot_c::blinkLed( int port, int mSec )
 }
 #if 1	//OPT_COMPASS
 #endif
+
+
+
+#if OPT_COMPASS
+
+bool robot_c::beginCompass(COMPASS_CLASS *pCompass) {
+	MSG(" robot_c::beginCompass()")
+	bool isConnected = false;
+	this->_pCompass = pCompass;
+	pCompass->begin(2);
+	isConnected = pCompass->testConnection();
+	if (isConnected)
+	{
+		MSG("COMPASS ok")
+	}
+	else
+	{
+		MSG("COMPASS FAILED!")
+
+	}
+
+	return isConnected;
+
+}
+
 	int robot_c::readCompassDeg() {
-
+//		dbg("1,readCompassDeg()....BEGIN;")
+		int16_t mx, my, mz;
 		/* Get a new sensor event */
-		sensors_event_t event;
-		_pCompass->getEvent(&event);
-
- 
-		// Hold the module so that Z is pointing 'up' and you can measure the heading with x&y
-		// Calculate heading when the magnetometer is level, then correct for signs of axis.
-		float heading = atan2(event.magnetic.y, event.magnetic.x);
-
-
-
-		// Set declination angle on your location and fix heading
-		// You can find your declination on: http://magnetic-declination.com/
-		// (+) Positive or (-) for negative
-		// For Bytom / Poland declination angle is 4'26E (positive)
-		// Formula: (deg + (min / 60.0)) / (180 / M_PI);
-		float declinationAngle = (2.0 + (22.0 / 60.0)) / (180 / M_PI); //ok per milano
-		heading += declinationAngle;
-
-		// Correct for heading < 0deg and heading > 360deg
-		if (heading < 0)
+		//sensors_event_t event;
+		//_pCompass->getEvent(&event);
+		// read raw heading measurements from device
+		if (_pCompass->testConnection())
 		{
-			heading += 2 * PI;
-		}
+			_pCompass->getHeading(&mx, &my, &mz);
+//			dbg("1,readCompassDeg()....1;")
+//			dbg(millis())
 
-		if (heading > 2 * PI)
+			// Hold the module so that Z is pointing 'up' and you can measure the heading with x&y
+			// Calculate heading when the magnetometer is level, then correct for signs of axis.
+			//float heading = atan2(event.magnetic.y, event.magnetic.x);
+			float heading = atan2(my, mx);
+
+
+
+			// Set declination angle on your location and fix heading
+			// You can find your declination on: http://magnetic-declination.com/
+			// (+) Positive or (-) for negative
+			// For Bytom / Poland declination angle is 4'26E (positive)
+			// Formula: (deg + (min / 60.0)) / (180 / M_PI);
+			float declinationAngle = 0.0413; //= (2.0 + (22.0 / 60.0)) / (180 / M_PI); //ok per milano 0.0413
+			heading += declinationAngle;
+
+			// Correct for heading < 0deg and heading > 360deg
+			if (heading < 0)
+			{
+				heading += 2 * PI;
+			}
+
+			if (heading > 2 * PI)
+			{
+				heading -= 2 * PI;
+			}
+
+			// Convert to degrees
+			float headingDegrees = heading * 180 / M_PI;
+			return (int)headingDegrees;
+
+		}
+		else
 		{
-			heading -= 2 * PI;
+			dbg("1,compass no connection;")
+				return -1;
 		}
-
-		// Convert to degrees
-		float headingDegrees = heading * 180 / M_PI;
-		return (int)headingDegrees;
 	}
 	int robot_c::readCompassDeg(COMPASS_CLASS *pCompass) {
-		this->_pCompass = pCompass;
-		/* Get a new sensor event */
-		sensors_event_t event;
-		pCompass->getEvent(&event);
-
-
-		// Hold the module so that Z is pointing 'up' and you can measure the heading with x&y
-		// Calculate heading when the magnetometer is level, then correct for signs of axis.
-		float heading = atan2(event.magnetic.y, event.magnetic.x);
-
-
-
-		// Set declination angle on your location and fix heading
-		// You can find your declination on: http://magnetic-declination.com/
-		// (+) Positive or (-) for negative
-		// For Bytom / Poland declination angle is 4'26E (positive)
-		// Formula: (deg + (min / 60.0)) / (180 / M_PI);
-		//float declinationAngle = (2.0 + (0.36666667)) / (180 / M_PI); //ok per milano
-		heading += 2.0064;	// declinationAngle;
-
-		// Correct for heading < 0deg and heading > 360deg
-		if (heading < 0)
-		{
-			heading += 2 * PI;
-		}
-
-		if (heading > 2 * PI)
-		{
-			heading -= 2 * PI;
-		}
-
-		// Convert to degrees
-		float headingDegrees = heading * 180 / M_PI;
-		return (int)headingDegrees;
+		_pCompass = pCompass;
+		return (int)readCompassDeg();
 
 	}
+#endif // OPT_COMPASS
 
 //void robot_c::pushPathHistory(commandDir_e dir, int val) {
 //	// push the numbers to the stack.

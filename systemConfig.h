@@ -6,12 +6,12 @@
 // Serial1 MMI
 #include <Arduino.h>
 
-#define ROBOT_STARTING_MODE  MODE_MODE_SLAVE  //AUTONOMOUS	// 
+#define ROBOT_STARTING_MODE  MODE_SLAVE  //AUTONOMOUS	// 
 
 #define SERIAL_MSG	Serial
 #define SERIAL_MSG_BAUD_RATE 115200
 
-#define SERIAL_MMI Serial1			//  MMI > Serial3  Test > Serial
+#define SERIAL_MMI Serial1			//  MMI > Serial1  Test > Serial
 #define SERIAL_MMI_BAUD_RATE 115200
 
 

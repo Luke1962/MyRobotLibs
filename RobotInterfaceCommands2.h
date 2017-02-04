@@ -1,9 +1,12 @@
 /* Robot Interface Commands */
+#ifndef __RobotInterfaceCommandsCore__
+#define __RobotInterfaceCommandsCore__
 
 // Commands we send from the PC and want to receive on the Arduino.
 // We must define a callback function in our Arduino program for each entry in the list below.
 //#include <CmdMessenger2.h>  // CmdMessenger2
 #include "robot.h"
+#include <MyRobotLibs\dbg.h>
 #include "Commands_Enum.h"
 #include <CmdMessenger2/CmdMessenger2.h>
 //extern struct robot_c robot;
@@ -19,63 +22,11 @@ char strBuff[MESSAGEMAXLEN];
 /// ///////////////////////////////////////////////////////////////////////
 //  C O M A N D I   D I   I M P O S T A Z I O N E  G E N E R A L E
 /// ///////////////////////////////////////////////////////////////////////
-void cmdMsg(const char msg[]){
-//	cmd->sendCmd( Msg, msg );
- 	SERIAL_MSG.print("1,"); SERIAL_MSG.print(msg); SERIAL_MSG.print(";");
- 	SERIAL_MMI.print("1,"); SERIAL_MMI.print(msg); SERIAL_MMI.print(";");
-	//ser.print("1,"); ser.print(msg); ser.print(";");
 
-}
-//void cmdMsg(const __FlashStringHelper* msg[]){
-////	cmd->sendCmd( Msg, msg );
-// 	SERIAL_MSG.print("1,"); SERIAL_MSG.print(msg); SERIAL_MSG.print(";");
-// 	SERIAL_MMI.print("1,"); SERIAL_MMI.print(msg); SERIAL_MMI.print(";");
-//	//ser.print("1,"); ser.print(msg); ser.print(";");
-//
-//}
-
-void cmdMsg( const char msg[], int v) {
- 	SERIAL_MSG.print("1,"); SERIAL_MSG.print(msg); SERIAL_MSG.print(v); SERIAL_MSG.print(";");
- 	SERIAL_MMI.print("1,"); SERIAL_MMI.print(msg); SERIAL_MMI.print(v);SERIAL_MMI.print(";");
- }
-
-//void cmdMsg(CmdMessenger2 *cmd,  char *msg, int v) {
-// 	cmd->sendCmd(Msg);
-//	for (int i = 0; i < sizeof(msg); i++)
-//	{
-//		cmd->sendCmdArg(msg[i]);
-//	}
-// 	cmd->sendCmdArg(v);
-//	cmd->sendCmdEnd();
-//}
-//void cmdMsg(CmdMessenger2 *cmd,  char msg[], int v) {
-// 	cmd->sendCmd(Msg);
-//	for (int i = 0; i < sizeof(msg); i++)
-//	{
-//		cmd->sendCmdArg(msg[i]);
-//	}
-// 	cmd->sendCmdArg(v);
-//	cmd->sendCmdEnd();
-//}
-//void cmdMsg(CmdMessenger2 *cmd,  String msg, int v) {
-// 	cmd->sendCmd(Msg);
-//	cmd->sendCmdArg(msg);
-// 	cmd->sendCmdArg(v);
-//	cmd->sendCmdEnd();
-//}
-//void cmdMsg(CmdMessenger2 *cmd, char msg[], int v) {
-//	//	cmd->sendCmd( Msg, msg );
-//	//SERIAL_MSG.print("1,"); SERIAL_MSG.print(msg); SERIAL_MSG.print(";");
-//	//ser.print("1,"); ser.print(msg); ser.print(";");
-//	cmd->sendCmd(Msg);
-//	cmd->sendCmdArg(msg);
-//	cmd->sendCmdArg(v);
-//	cmd->sendCmdEnd();
-//}
  
-void OnCmdReboot(CmdMessenger2 *cmd){
+void onCmdReboot(CmdMessenger2 *cmd){
 	//reset software
-	cmdMsg( "Riavvio..." );
+	MSG( "Riavvio..." );
 	Riavvia();
 //	software_Reboot();
 
@@ -83,50 +34,46 @@ void OnCmdReboot(CmdMessenger2 *cmd){
 /// ///////////////////////////////////////////////////////////////////////
 //  Modalità operativa : SLAVE , JOYSTICK , AUTONOMOUS
 /// ///////////////////////////////////////////////////////////////////////
-void OnCmdRobotSetMode(CmdMessenger2 *cmd){
-	if (robot.status.operatingMode == MODE_SLAVE) { SPEAK_OK }
-
-	robot.SetMode((operatingMode_e)cmd->readInt16Arg());
+void onCmdRobotSetMode(CmdMessenger2 *cmd){
  
+	robot.status.operatingMode =(operatingMode_e)cmd->readInt16Arg();
 	switch (robot.status.operatingMode)
 	{
 		case MODE_SLAVE:
 			cmd->sendCmd( CmdRobotSetMode, MODE_SLAVE);
-			cmdMsg("SetMode SLAVE");
+			MSG("OK SLAVE");
 			break;
 		case MODE_JOYSTICK:
 			cmd->sendCmd( CmdRobotSetMode, MODE_JOYSTICK );
 			 
-			cmdMsg("SetMode JOYSTICK");
+			MSG("OK JOYSTICK");
 			break;
 		case MODE_AUTONOMOUS:
 			cmd->sendCmd( CmdRobotSetMode, MODE_AUTONOMOUS );
-			 SPEAK_AUTONOMO
-			cmdMsg( "SetMode AUTONOMOUS" );
+			SPEAK_AUTONOMO
+			MSG( "OK AUTONOMOUS" );
 			break;	
- 	
+	
 		default:
-			cmd->sendCmd(Msg,"Unrecognised Mode");			 
+			MSG("Unrecognised Mode");
 			break;
 	}
 }
+
+
 void OnUnknownCommand(CmdMessenger2 *cmd)
 {
 
-	cmd->sendCmd(kError,"\nCommand not recognised");
+	MSG("Command not recognised");
 
-	cmdMsg("unkwownCmd :");
+	//MSG("unkwownCmd :");
 	cmd->reset();
-}
-void OnCmdRobotHello(CmdMessenger2 *cmd)
-{
-	cmdMsg("Hello I'm ready");
 }
 /// ///////////////////////////////////////////////////////////////////////
 //  C O M A N D I   D I   M O V I M E N T O
-//////////////////////////////////////////////////////////////////////////
+/// ///////////////////////////////////////////////////////////////////////
 // Avanti o indietro di x cm --------------------------------------------
-void OnCmdRobotMoveCm(CmdMessenger2 *cmd)
+void onCmdRobotMoveCm(CmdMessenger2 *cmd)
 {
 
  
@@ -134,7 +81,6 @@ void OnCmdRobotMoveCm(CmdMessenger2 *cmd)
 	int cmPercorsi=0;
 	int dist = cmd->readInt16Arg();
 	
-	cmdMsg( "MoveCm: ", dist);
 
 	//cmd->sendCmd(Msg,dist);
 
@@ -143,13 +89,13 @@ void OnCmdRobotMoveCm(CmdMessenger2 *cmd)
 
 	// riporto la distanza percorsa-----------
 	if(dist>0){
-		cmdMsg( "Moved steps Forward: ", robot.status.cmd.stepsDone);
+		MSG2( "Moved steps Forward: ", robot.status.cmd.stepsDone);
 	}
 	else{
-		cmdMsg( "Moved steps Back: ", robot.status.cmd.stepsDone);
+		MSG2( "Moved steps Back: ", robot.status.cmd.stepsDone);
 	}
  
-	cmdMsg( "..of targetSteps:", robot.status.cmd.targetSteps);
+	MSG2( "..of targetSteps:", robot.status.cmd.targetSteps);
 	//-----------------------------------------
 
  
@@ -157,13 +103,13 @@ void OnCmdRobotMoveCm(CmdMessenger2 *cmd)
 	cmd->sendCmdStart( kbMovedCm );
 	cmd->sendCmdArg( cmPercorsi );
 	cmd->sendCmdEnd();
+	MSG2( "Cm done: ", cmPercorsi);
 	//-----------------------------------------
 }
  // ROTAZIONE IN RADIANTI --------------------------------------
-void OnCmdRobotRotateRadiants(CmdMessenger2 *cmd)
+void onCmdRobotRotateRadiants(CmdMessenger2 *cmd)
 {
 	float rad = cmd->readFloatArg();
-	cmdMsg(  "OK rotateRadiants: "  );
 
 	float RadPercorsi = 0.0;
 	RadPercorsi = robot.rotateRadiants( rad );
@@ -172,12 +118,12 @@ void OnCmdRobotRotateRadiants(CmdMessenger2 *cmd)
 
 	// Messaggio step percorsi-----------------
 	if (RadPercorsi>0){
-		cmdMsg("Rotated stp CW: ", RadPercorsi);
+		MSG2("Rotated stp CW: ", RadPercorsi);
 	}
 	else{
-		cmdMsg("Rotated stp CCW: ", -RadPercorsi);
+		MSG2("Rotated stp CCW: ", -RadPercorsi);
 	}
-	cmdMsg("of : ", robot.status.cmd.targetSteps);
+	MSG2("of : ", robot.status.cmd.targetSteps);
 	//-----------------------------------------
 
 
@@ -186,29 +132,29 @@ void OnCmdRobotRotateRadiants(CmdMessenger2 *cmd)
 	cmd->sendCmdStart( kbRotationRad	);
 	cmd->sendCmdArg( RadPercorsi );
 	cmd->sendCmdEnd();
+	MSG2(  "rot done Rad: " , RadPercorsi);
 	//-----------------------------------------
 }
-void OnCmdRobotRotateDeg(CmdMessenger2 *cmd)
+void onCmdRobotRotateDeg(CmdMessenger2 *cmd)
 {
 	if (robot.status.operatingMode == MODE_SLAVE) { SPEAK_OK }
 	int deg = cmd->readInt16Arg();
 	//String s = "OK rotateRadiants: ";
-	cmdMsg( "OK rotateRadiants: ");
 
 	int DegPercorsi = 0;
- 	DegPercorsi = robot.rotateDeg(deg);
+	DegPercorsi = robot.rotateDeg(deg);
  
-	//dtostrf( RadPercorsi, 7, 3, s );
+
 
 	// Messaggio step percorsi-----------------
 	if (DegPercorsi > 0) {
 		// Messaggio step percorsi-----------------
-		cmdMsg( "Rotated stp CW: ", DegPercorsi);
+		MSG2( "Rotated Deg CW: ", DegPercorsi);
 	}
 	else {
-		cmdMsg( "Rotated stp CCW: ", -DegPercorsi);
+		MSG2("Rotated Deg CCW: ", -DegPercorsi);
 	}
-	cmdMsg( "of : ", deg);
+	MSG2( "of : ", deg);
 	//-----------------------------------------
 	//-----------------------------------------
 
@@ -218,42 +164,55 @@ void OnCmdRobotRotateDeg(CmdMessenger2 *cmd)
 	cmd->sendCmdStart(kbRotationDeg);
 	cmd->sendCmdArg(DegPercorsi);
 	cmd->sendCmdEnd();
+	MSG2( "Rotated Deg: ", DegPercorsi);
 	//-----------------------------------------
 }
 
-void OnCmdRobotMoveCCW(CmdMessenger2 *cmd)
+void onCmdRobotMoveCCW(CmdMessenger2 *cmd)
 {
 	int ck= cmd->readInt16Arg();
  
- 	cmdMsg( "RECEIVED COMMAND [MoveCCW]", ck);
- 	robot.goCCW(ck);
+	MSG2( "OK MoveCCW: ", ck);
+	robot.goCCW(ck);
 }
+// Avvia il robot secondo direzione e velocità passata dagli argomenti
+void onCmdRobotGo(CmdMessenger2 *cmd)
+{
+	commandDir_e dir= (commandDir_e)cmd->readInt16Arg();
+	robotSpeed_e speed= (robotSpeed_e)cmd->readInt16Arg();	 
+
+	MSG("OK Move: ");
+	robot.go(dir,speed);
+}
+// FERMA IMMEDIATAMENTE
+void onCmdRobotStop(CmdMessenger2 *cmd)
+{
+	robot.stop();
+}
+
 //////////////////////////////////////////////////////////////////////////
 /// C O M A N D I   D I   I M P O S T A Z I O N E  P E R I F E R I C H E
 //////////////////////////////////////////////////////////////////////////
-void OnCmdRobotRele(CmdMessenger2 *cmd)
+void onCmdRobotRele(CmdMessenger2 *cmd)
 {
-
 
 	int16_t rele = cmd->readInt16Arg();		//numero del rele da attivare/disattivare
 	int16_t onoff = cmd->readInt16Arg();		//numero del rele da attivare/disattivare
 	robot.setRele(rele, onoff);
 
-	char m[] = "set Rele :";
-	cmdMsg(m , rele);
+	MSG2(  "set Rele :", rele);
 
 	// rimanda il medesimo comando indietro come ack
 
-
 }
-void OnCmdSetLed(CmdMessenger2 *cmd)
+void onCmdSetLed(CmdMessenger2 *cmd)
 {
 
 	int16_t onoff = cmd->readInt16Arg();		//numero del rele da attivare/disattivare
 	digitalWriteFast( Pin_ONBOARD_LED, onoff );
 
 
-	cmdMsg( "Ack CmdSetLed :", onoff);
+	MSG2( "Ack CmdSetLed :", onoff);
 
 	//// rimanda il medesimo comando indietro come ack
 	//cmd->sendCmdStart( CmdSetLed );
@@ -261,19 +220,19 @@ void OnCmdSetLed(CmdMessenger2 *cmd)
 	//cmd->sendCmdEnd();
 
 }
-void OnCmdSetLaser(CmdMessenger2 *cmd)
+void onCmdSetLaser(CmdMessenger2 *cmd)
 {
 
-	int16_t onoff = cmd->readInt16Arg();		//numero del rele da attivare/disattivare
+	bool onoff = cmd->readBoolArg();		//numero del rele da attivare/disattivare
 	digitalWriteFast( Pin_LaserOn, onoff );
-	cmdMsg( "Ack CmdSetLaser :", onoff);
+	MSG2( "Ack CmdSetLaser :", onoff);
 
 	//// rimanda il medesimo comando indietro come ack
 	//cmd->sendCmdStart( CmdSetLaser);
 	//cmd->sendCmdArg( digitalReadFast(Pin_LaserOn ));
 	//cmd->sendCmdEnd();
 }
-void OnCmdSetPort(CmdMessenger2 *cmd)
+void onCmdSetPort(CmdMessenger2 *cmd)
 {
 
 
@@ -282,7 +241,7 @@ void OnCmdSetPort(CmdMessenger2 *cmd)
 
 	digitalWriteFast( port, onoff );
 	//String s = "Ack CmdSetPort " + String( port ) + ":" + String( onoff );
-	cmdMsg( "Ack CmdSetPort :", port);
+	MSG2( "Ack CmdSetPort :", port);
 
  //	// rimanda il medesimo comando indietro come ack
 	//cmd->sendCmdStart( CmdSetPort );
@@ -295,62 +254,120 @@ void OnCmdSetPort(CmdMessenger2 *cmd)
 //////////////////////////////////////////////////////////////////////////
 /// C O M A N D I   D I   A C Q U I S I Z I O N E
 //////////////////////////////////////////////////////////////////////////
-void OnCmdGetSensorsHRate(CmdMessenger2 *cmd)  //attenzione al limite dei 9600baud su canale WiFi
+void onCmdGetSensorsHRate(CmdMessenger2 *cmd)  //attenzione al limite dei 9600baud su canale WiFi
 {
-	robot.readSensors();	//IR proxy, Gyro
+	//osalSysDisable();
+
+	//robot.readSensorsHR();	//IR proxy, Gyro
+
 
 	cmd->sendCmdStart(kbGetSensorsHRate); 
+	// param 1
 	cmd->sendCmdArg(millis());
 
+	// param 2
 	cmd->sendCmdArg(robot.status.tictac);
 
+	// param 3,4,5
 	cmd->sendCmdArg(robot.status.posCurrent.x);	//robot position X
 	cmd->sendCmdArg(robot.status.posCurrent.y);	//robot position y
 	cmd->sendCmdArg(robot.status.posCurrent.r);	//robot position alfa gradi
 
+	// param 6,7,8,9,10
 	cmd->sendCmdArg(robot.status.sensors.irproxy.fw);	// IR proxy
 	cmd->sendCmdArg(robot.status.sensors.irproxy.fwHL);	// IR proxy
+	cmd->sendCmdArg(robot.status.sensors.irproxy.fr);	// IR proxy
+	cmd->sendCmdArg(robot.status.sensors.irproxy.fl);	// IR proxy
 	cmd->sendCmdArg(robot.status.sensors.irproxy.bk);	// IR proxy
+
+	// param 11
 	cmd->sendCmdArg(robot.status.sensors.pirDome);		// movimento
 
+	// param 12,13,14
 	cmd->sendCmdArg(robot.status.sensors.analog[0]);	//pot
 	cmd->sendCmdArg(robot.status.sensors.analog[1]);	//batteria
 	cmd->sendCmdArg(robot.status.sensors.analog[2]);	//light
 
+
+	// param 15,16
 	cmd->sendCmdArg(robot.getReleStatus(0));		//rele 1
 	cmd->sendCmdArg(robot.getReleStatus(1));		//rel2
 
 	//cmd->sendCmdArg( digitalReadFast( Pin_MotENR ) );
 	//cmd->sendCmdArg( digitalReadFast( Pin_MotENL ) );
 
+	// param 17,18
 	cmd->sendCmdArg(robot.status.sensors.switchTop); // status switch modo Autonomo/slave
 	cmd->sendCmdArg(robot.status.act.laserOn); // laser
 
-	cmd->sendCmdArg(robot.readBattChargeLevel()); //0-100
+	//cmd->sendCmdArg(robot.readBattChargeLevel()); //0-100
 
-	cmd->sendCmdArg(robot.status.sensors.gps.sats);		//gps
-	cmd->sendCmdArg(robot.status.sensors.gps.lat);
-	cmd->sendCmdArg(robot.status.sensors.gps.lng);
+	//cmd->sendCmdArg(robot.status.sensors.gps.sats);		//gps
+	//cmd->sendCmdArg(robot.status.sensors.gps.lat);
+	//cmd->sendCmdArg(robot.status.sensors.gps.lng);
 	cmd->sendCmdEnd();
 
+	//osalSysEnable();
+
 }
-void OnCmdGetSensorsLRate(CmdMessenger2 *cmd)
+void onCmdGetSensorsLRate(CmdMessenger2 *cmd)
 {
-  
+	robot.readSensorsLR();	//IR proxy, Gyro
+
 	cmd->sendCmdStart(kbGetSensorsLRate); 
 	// Percentuale di carica batteria
 	
-	cmd->sendCmdArg( (int)robot.status.operatingMode );
-	cmd->sendCmdArg( robot.readBattChargeLevel() );	
+	cmd->sendCmdArg( robot.readBattChargeLevel() );
 	cmd->sendCmdArg( robot.status.sensors.switchTop );	
-	cmd->sendCmdArg(robot.status.sensors.gps.sats);
+
 	cmd->sendCmdArg(robot.status.sensors.gps.lat);
 	cmd->sendCmdArg(robot.status.sensors.gps.lng);
-	cmd->sendCmdArg(robot.status.sensors.gps.alt);
+	cmd->sendCmdArg(robot.status.sensors.gps.sats);
+
+	cmd->sendCmdArg( (int)robot.status.operatingMode );
+
+	//cmd->sendCmdArg(robot.status.sensors.gps.alt);
 
 	cmd->sendCmdEnd();
 }
-void OnCmdReadPort(CmdMessenger2 *cmd)
+void onCmdGetProxy(CmdMessenger2 *cmd)  //attenzione al limite dei 9600baud su canale WiFi
+{
+	//osalSysDisable();
+
+	//robot.readSensorsHR();	//IR proxy, Gyro
+
+
+	cmd->sendCmdStart(kbProxy); 
+	cmd->sendCmdArg(robot.status.sensors.irproxy.fw);	// IR proxy
+	cmd->sendCmdArg(robot.status.sensors.irproxy.fwHL);	// IR proxy
+	cmd->sendCmdArg(robot.status.sensors.irproxy.fr);	// IR proxy
+	cmd->sendCmdArg(robot.status.sensors.irproxy.fl);	// IR proxy
+	cmd->sendCmdArg(robot.status.sensors.irproxy.bk);	// IR proxy
+
+	cmd->sendCmdArg(robot.status.sensors.pirDome);		// movimento
+	cmd->sendCmdEnd();
+
+	//osalSysEnable();
+
+}
+
+void onCmdGetPose(CmdMessenger2 *cmd)  //attenzione al limite dei 9600baud su canale WiFi
+{
+
+	cmd->sendCmdStart(kbGetPose); 
+	cmd->sendCmdArg(millis());
+
+
+	cmd->sendCmdArg(robot.status.posCurrent.x);	//robot position X
+	cmd->sendCmdArg(robot.status.posCurrent.y);	//robot position y
+	cmd->sendCmdArg(robot.status.posCurrent.r);	//robot position alfa gradi
+
+	cmd->sendCmdEnd();
+
+}
+
+
+void onCmdReadPort(CmdMessenger2 *cmd)
 {
 	int16_t port = cmd->readInt16Arg();		//numero della porta
 	if (robot.status.operatingMode == MODE_SLAVE) { SPEAK_OK }
@@ -369,84 +386,47 @@ void OnCmdReadPort(CmdMessenger2 *cmd)
 //////////////////////////////////////////////////////////////////////////
 /// si muove alla  direzione e  velocità impostata
 //////////////////////////////////////////////////////////////////////////
-/*
-void OnCmdRobotStartMoving(CmdMessenger2 *cmd)
-{
-	robot.status.cmd.commandDir = (commandDir_e)cmd->readInt16Arg();		//direzione (enum commandDir_t {STOP, GOFW, GOBK, GOCW, GOCCW};)
-	int motorCK= cmd->readInt16Arg();
-	//String s = "Mov ck" +  robot.currCommand.commandDir;
-	Serial.print( "1,Mov ck" ); Serial.print( motorCK ); Serial.print( ";" );
-
-	
-	switch (robot.status.cmd.commandDir)
-	{
-		case GOF:
-			robot.goFW(motorCK);
-			cmdMsg("goFW");
-			break;
-		case GOB:
-			robot.goBK(motorCK);
-			cmdMsg("goBK" );
-			break;
-		case GOR:
-			robot.goCW(motorCK);
-			cmdMsg( "goCW" );
-			break;	
-		case GOL:
-			robot.goCCW(motorCK);
-			cmdMsg("goCCW" );
-			break;		
-		default:
-			cmdMsg( "Error on direction" );
-			break;
-	}
-}
-void OnCmdRobotStopMoving(CmdMessenger2 *cmd){
-	robot.stop();
-	cmdMsg( "Stopped" );
-
-	}
-*/
-
+ 
 //////////////////////////////////////////////////////////////////////////
 /// C O M A N D I      S O N A R
 //////////////////////////////////////////////////////////////////////////
+#pragma region SONAR
 
 
-	//////////////////////////////////////////////////////////////
-	///		Invia i dati del sonar
-	/////////////////////////////////////////////////////////////
-	void kbSonarSendData(CmdMessenger2 *cmd){
+	// ////////////////////////////////////////////////////////////
+	//		Invia un set di coppie singole di dati (alfa, Distance)
+	// alfa è l'angolo del servo (0° dritto, >0 a destra)
+	// ///////////////////////////////////////////////////////////
+	void kbSonarSendData(CmdMessenger2 *cmd) {
 		int alfa;
 		int i;
-		
+
 
 		// invio quanti dati ho da trasmettere
-		//kb.sendCmdArg( robot.status.parameters.sonarScanSteps );
-		 
-		for (i = 0; i< robot.status.parameters.sonarScanSteps; i++)
+		// kb.sendCmdArg( robot.status.parameters.sonarScanSteps );
+
+		for (i = 0; i < robot.status.parameters.sonarScanSteps; i++)
 		{
-			//kb.printLfCr();
-			//delay( 20 );
+
 			cmd->sendCmdStart(kbGetSonarData);
 			alfa = robot.status.parameters.sonarStartAngle + i* robot.status.parameters.sonarStepAngle;
-			cmd->sendCmdArg( alfa );
-			cmd->sendCmdArg( robot.status.sensors.sonarEchos[i] );
+			cmd->sendCmdArg(alfa);
+			cmd->sendCmdArg(robot.status.sensors.sonarEchos[i]);
 			cmd->sendCmdEnd();
 		}
-		cmd->sendCmd( kbSonarDataEnd );
+		cmd->sendCmd(kbSonarDataEnd);
 
 	}
 
-	void  OnCmdSonarScanDefault(CmdMessenger2 *cmd) 
+	void  onCmdSonarScanDefault(CmdMessenger2 *cmd)
 	{
- 
- 
-		cmdMsg( "Scanning...");
+
+
+		MSG("Scanning...");
 		robot.LDSScanBatch();
 		//delay( 200 );
 		// invia i dati 
-		cmdMsg( "Sending scan data...");
+		MSG("Sending scan data...");
 		//kbSonarSendData(cmd);
 		int alfa;
 		int i;
@@ -455,16 +435,16 @@ void OnCmdRobotStopMoving(CmdMessenger2 *cmd){
 		// invio quanti dati ho da trasmettere
 		//kb.sendCmdArg( robot.status.parameters.sonarScanSteps );
 		dbg2("sonarScanSteps: ", robot.status.parameters.sonarScanSteps)
-		for (i = 0; i< robot.status.parameters.sonarScanSteps; i++)
-		{
-			//kb.printLfCr();
-			//delay( 20 );
-			cmd->sendCmdStart(kbGetSonarData);
-			alfa = robot.status.parameters.sonarStartAngle + i* robot.status.parameters.sonarStepAngle;
-			cmd->sendCmdArg(alfa);
-			cmd->sendCmdArg(robot.status.sensors.sonarEchos[i]);
-			cmd->sendCmdEnd();
-		}
+			for (i = 0; i < robot.status.parameters.sonarScanSteps; i++)
+			{
+				//kb.printLfCr();
+				//delay( 20 );
+				cmd->sendCmdStart(kbGetSonarData);
+				alfa = robot.status.parameters.sonarStartAngle + i* robot.status.parameters.sonarStepAngle;
+				cmd->sendCmdArg(alfa);
+				cmd->sendCmdArg(robot.status.sensors.sonarEchos[i]);
+				cmd->sendCmdEnd();
+			}
 		cmd->sendCmd(kbSonarDataEnd);
 
 		//CmdMessenger2 kb = CmdMessenger2( Serial );
@@ -475,16 +455,16 @@ void OnCmdRobotStopMoving(CmdMessenger2 *cmd){
 	///////////////////////////////////////////////////////////////////////////////
 	// Setup sonar																///
 	///////////////////////////////////////////////////////////////////////////////
-	void  OnCmdSonarScan(CmdMessenger2 *cmd) 
+	void  onCmdSonarScan(CmdMessenger2 *cmd)
 	{
 		// es. di comando 2 passate
 		// 25,2,200,500,45,135,10;
 
 		bool blLimited = false;
-		String s="";
+		String s = "";
 		robot.status.parameters.sonarScanSweeps = cmd->readInt16Arg();
 		robot.status.parameters.sonarScanSpeed = cmd->readInt16Arg();	//ROBOT_SONAR_SCAN_SPEED_DEFAULT=200;
-		robot.status.parameters.sonarMaxDistance=cmd->readInt16Arg();	// 500; //in cm
+		robot.status.parameters.sonarMaxDistance = cmd->readInt16Arg();	// 500; //in cm
 		robot.status.parameters.sonarStartAngle = cmd->readInt16Arg();
 		robot.status.parameters.sonarEndAngle = cmd->readInt16Arg();	// 180; // ampiezza angolo di scansione in gradi
 		robot.status.parameters.sonarStepAngle = cmd->readInt16Arg();	// 8 ; //  ampiezza step in gradi della scansione (ok anche 10)
@@ -492,43 +472,43 @@ void OnCmdRobotStopMoving(CmdMessenger2 *cmd){
 		if (robot.status.parameters.sonarScanSweeps > 1)
 		{
 			robot.status.parameters.sonarScanSweeps = 1;
-			s += "\nOnCmdSonarSetup ! Limited sonarScanSweeps to 1";
+			s += "\nonCmdSonarSetup ! Limited sonarScanSweeps to 1";
 
 			blLimited = true;
 		}
-		if ( robot.status.parameters.sonarEndAngle > 180)
+		if (robot.status.parameters.sonarEndAngle > 180)
 		{
-			robot.status.parameters.sonarEndAngle = 180 ;
-			s += "\nOnCmdSonarSetup ! Limited sonarEndAngle to 180";
+			robot.status.parameters.sonarEndAngle = 180;
+			s += "\nonCmdSonarSetup ! Limited sonarEndAngle to 180";
 
 			blLimited = true;
 		}
-		
+
 		// Wait 50ms between pings (about 20 pings/sec). 29ms should be the shortest delay between pings.
 		if (robot.status.parameters.sonarScanSpeed < 40)
-		{ 
+		{
 			robot.status.parameters.sonarScanSpeed = 40;
-			s += "\nOnCmdSonarSetup ! Limited sonarScanSpeed to 40";
+			s += "\nonCmdSonarSetup ! Limited sonarScanSpeed to 40";
 
 			blLimited = true;
 		}
 		//robot.status.parameters.sonarScanSteps =min( (int)(robot.status.parameters.sonarScanAngle / robot.status.parameters.sonarStepAngle) , 255);
-		
+
 		if (!blLimited)
 		{
-			cmdMsg("\nOnCmdSonarSetup OK");
+			MSG("onCmdSonarSetup OK");
 		}
 		else
 		{
-			cmdMsg("\nVALORI LIMITATI !!");
+			MSG("VALORI LIMITATI !!");
 			/// Rimando i valori dei parametri limitati
 
 		}
 
 
-		cmdMsg( "Scanning...");
+		MSG("Scanning...");
 		robot.LDSScanBatch();
-		delay( 200 );
+		delay(200);
 		// invia i dati 
 		kbSonarSendData(cmd);
 
@@ -537,16 +517,14 @@ void OnCmdRobotStopMoving(CmdMessenger2 *cmd){
 
 	}
 
-
-
-
 	/// //////////////////////////////////////////////////
 	// invia i dati SONAR man mano che si sposta
 	/// //////////////////////////////////////////////////
-	void OnCmdSonarScanSync(CmdMessenger2 *cmd)
+	void onCmdSonarScanSync(CmdMessenger2 *cmd)
 	{  
 
-		cmdMsg("\nStart scanning...");
+		MSG("Start scanning...");
+		
 
 		cmd->sendCmdStart(kbGetSonarData);
 
@@ -555,7 +533,7 @@ void OnCmdRobotStopMoving(CmdMessenger2 *cmd){
 
 		while(pos < robot.status.parameters.sonarEndAngle ) // goes from 0 degrees to 180 degrees
 		{
-			robot.status.sensors.sonarEchos[i] =robot.SonarPingAtPos(pos);
+			robot.status.sensors.sonarEchos[i] =robot.sonarPingAtPos(pos);
 			cmd->sendCmdArg( robot.status.sensors.sonarEchos[i]);
 			chThdSleepMilliseconds( robot.status.parameters.sonarScanSpeed);
 			
@@ -566,56 +544,54 @@ void OnCmdRobotStopMoving(CmdMessenger2 *cmd){
 		}
 		cmd->sendCmdEnd();
 	
- 		cmdMsg("...end scanning");
+		MSG("...end scanning");
 	}
 
+	void onCmdServoPos(CmdMessenger2 *cmd)
+	{
+		int alfa;
+		alfa =cmd->readInt16Arg();
+		if ((alfa >= 0) && (alfa <= 180)) {
+			robot._pServoSonar->write(alfa);
+		}
+		MSG3("Servo at: ",alfa,"°");
 
+	}
 
-// Called when a received command has no attached function
-
-// Callback function calculates the sum of the two received float values
-//void OnCmdRobotMoveFW()
-//{
-  //
-  //// Retreive second parameter as float
-  //float b = cmdMessenger.readFloatArg();
-  //
-  //// Send back the result of the addition
-  ////cmdMessenger.sendCmd(kFloatAdditionResult,a + b);
-  //cmdMessenger.sendCmdStart(kFloatAdditionResult);
-  //cmdMessenger.sendCmdArg(a+b);
-  //cmdMessenger.sendCmdArg(a-b);
-  //cmdMessenger.sendCmdEnd();
-//}
+#pragma endregion
 
 
 
+
+ 
 
 
 void attachCommandCallbacks(CmdMessenger2 *cmd)		//va messa in fondo
 {
-#pragma region  Attach callback methods to WiFi channel 
+#pragma region  Attach callback methods 
 
 	cmd->attach(OnUnknownCommand);
-	cmd->attach(CmdRobotHello, OnCmdRobotHello);
-	cmd->attach(CmdReboot, OnCmdReboot);
 
-	//cmd->attach(CmdRobotStartMoving, OnCmdRobotStartMoving);
-	//cmd->attach(CmdRobotStopMoving, OnCmdRobotStopMoving);
+	cmd->attach(CmdRobotSetMode, onCmdRobotSetMode);
+	cmd->attach(CmdRobotSonarScan,onCmdSonarScan);
+	cmd->attach(CmdRobotGo, onCmdRobotGo);
+	cmd->attach(CmdRobotStop, onCmdRobotStop);
 
-	cmd->attach(CmdRobotMoveCm, OnCmdRobotMoveCm);
-	cmd->attach(CmdRobotRotateRadiants, OnCmdRobotRotateRadiants);
-	cmd->attach(CmdRobotRotateDeg, OnCmdRobotRotateDeg);
+	cmd->attach(CmdRobotMoveCm, onCmdRobotMoveCm);
+	cmd->attach(CmdRobotRotateDeg, onCmdRobotRotateDeg);
 
-	cmd->attach(CmdRobotRele, OnCmdRobotRele);
-	cmd->attach(CmdSetLed, OnCmdSetLed);
-	cmd->attach(CmdSetLaser, OnCmdSetLaser);
-	cmd->attach(CmdSetPort, OnCmdSetPort);
+	cmd->attach(CmdSetRele, onCmdRobotRele);
+	cmd->attach(CmdSetLed, onCmdSetLed);
+	cmd->attach(CmdSetLaser, onCmdSetLaser);
+	cmd->attach(CmdSetPort, onCmdSetPort);
 
-	cmd->attach(CmdGetSensorsLRate, OnCmdGetSensorsLRate);
-	cmd->attach(CmdGetSensorsHRate, OnCmdGetSensorsHRate);
-	cmd->attach(CmdRobotSetMode, OnCmdRobotSetMode);
-	cmd->attach(CmdSonarScan,OnCmdSonarScan);
+	cmd->attach(CmdGetSensorsHRate, onCmdGetSensorsHRate);
+	cmd->attach(CmdGetSensorsLRate, onCmdGetSensorsLRate);
+	cmd->attach(CmdGetPose,onCmdGetPose);
+	cmd->attach(CmdReboot, onCmdReboot);
+	cmd->attach(CmdServoPos, onCmdServoPos);
+	cmd->attach(CmdGetProxy, onCmdGetProxy);
 
 #pragma endregion
 }
+#endif // !__RobotInterfaceCommandsCore__

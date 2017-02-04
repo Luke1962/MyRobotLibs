@@ -1,5 +1,8 @@
 #if !defined(__COMMANDS_ENUM_H__)
 #define __COMMANDS_ENUM_H__
+///////////////////////////////////////////////////////////////////
+// SE MODIFICHI L'ELENCO DEVI RICOMPILARE ENTRAMBI MMI E CORE !!!!!
+///////////////////////////////////////////////////////////////////
 enum commands_e		// Commands da mantenere allineati con robot.cs
 {		//prefisso Cmd per i comandi da remoto, cb per i callback
 	Nil,
@@ -23,7 +26,7 @@ enum commands_e		// Commands da mantenere allineati con robot.cs
 
 	// MOVIMENTO ------------
 	CmdRobotStartMoving,
-	CmdRobotStopMoving,
+	CmdRobotStop,
 	CmdRobotMoveCm,
 	CmdRobotRotateRadiants,
 	CmdRobotRotateDeg,
@@ -31,17 +34,18 @@ enum commands_e		// Commands da mantenere allineati con robot.cs
 	// SENSORI --------------
 	CmdGetSensorsHRate,
 	CmdGetSensorsLRate,
-
+	CmdGetPose,
+	CmdGetProxy,
 	// ATTUATORI ------------
-	CmdRobotRele,
+	CmdSetRele,
 
 	// sonar-----------
-	CmdSonarScan,
+	CmdRobotSonarScan,
 	CmdSonarScanBatch,
 	CmdSonarScanSync,
 
 	cmdSpeech,
-	// callback dal robot al PC ------------------------------
+	// callback dal robot al PC o MMI------------------------------
 	kbMovedCm,
 	kbRotationRad,
 	kbRotationDeg,
@@ -51,6 +55,10 @@ enum commands_e		// Commands da mantenere allineati con robot.cs
 	kbSonarDataEnd,
 	CmdSetLaser,
 	CmdSetPort,
-	kbReadPort
+	kbReadPort,
+	kbGetPose,
+	kbProxy,
+	CmdRobotGo,
+	CmdServoPos
 } ;
 #endif

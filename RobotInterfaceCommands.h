@@ -46,17 +46,17 @@ void OnCmdRobotSetMode(){
 		case MODE_SLAVE:
 			cmdWiFi.sendCmd( CmdRobotSetMode, MODE_SLAVE );
 			SPEAK_MODE_SLAVE
-			cmdMsg("SetMode MODE_SLAVE"); 
+			cmdMsg("cmdSetMode MODE_SLAVE"); 
 			break;
 		case JOYSTICK:
 			cmdWiFi.sendCmd( CmdRobotSetMode, JOYSTICK );
 			 
-			cmdMsg("SetMode JOYSTICK");
+			cmdMsg("cmdSetMode JOYSTICK");
 			break;
 		case AUTONOMOUS:
 			cmdWiFi.sendCmd( CmdRobotSetMode, AUTONOMOUS );
 			 SPEAK_AUTONOMO
-			cmdMsg( "SetMode AUTONOMOUS" );
+			cmdMsg( "cmdSetMode AUTONOMOUS" );
 			break;	
  	
 		default:
@@ -98,7 +98,7 @@ void OnCmdRobotMoveCm()
 	cmdWiFi.sendCmd(Msg,dist);
 
 	//eseguo lo spostamento
-	cmPercorsi=robot.moveCm(dist);
+	cmPercorsi=robot.cmdMoveCm(dist);
 
 	// riporto la distanza percorsa-----------
 	if(dist>0){
@@ -161,7 +161,7 @@ void OnCmdRobotRotateDeg()
 	cmdMsg(s);
 
 	int DegPercorsi = 0;
-	DegPercorsi = robot.rotateDeg(deg);
+	DegPercorsi = robot.cmdRotateDeg(deg);
 
 	//dtostrf( RadPercorsi, 7, 3, s );
 
@@ -204,11 +204,11 @@ void OnCmdRobotRele()
 
 	int16_t rele = cmdWiFi.readInt16Arg();		//numero del rele da attivare/disattivare
 	int16_t onoff = cmdWiFi.readInt16Arg();		//numero del rele da attivare/disattivare
-	robot.setRele(rele, onoff);
+	robot.cmdSetRele(rele, onoff);
 	String s = "Msg Rele " + String(rele) + ":" + String(onoff);
 	cmdWiFi.sendCmd(Msg,s);
 	// rimanda il medesimo comando indietro come ack
-	cmdWiFi.sendCmdStart(CmdRobotRele );
+	cmdWiFi.sendCmdStart(CmdSetRele );
 	cmdWiFi.sendCmdArg( rele );
 	cmdWiFi.sendCmdArg( onoff );
 	cmdWiFi.sendCmdEnd();
@@ -264,7 +264,7 @@ void OnCmdSetPort()
 //////////////////////////////////////////////////////////////////////////
 void OnCmdGetSensorsHRate()  //attenzione al limite dei 9600baud
 {
-	robot.readSensors();	//IR proxy, Gyro
+	robot.cmdReadAllSensors();	//IR proxy, Gyro
 
 	cmdWiFi.sendCmdStart(kbGetSensorsHRate); 
 	cmdWiFi.sendCmdArg(robot.status.irproxy.fw);	// IR proxy
@@ -562,12 +562,12 @@ void attachCommandCallbacks()		//va messa in fondo
 	cmdWiFi.attach(CmdReboot, OnCmdReboot);
 
 	cmdWiFi.attach(CmdRobotStartMoving, OnCmdRobotStartMoving);
-	cmdWiFi.attach(CmdRobotStopMoving, OnCmdRobotStopMoving);
+	cmdWiFi.attach(CmdRobotStop, OnCmdRobotStopMoving);
 
 	cmdWiFi.attach(CmdRobotMoveCm, OnCmdRobotMoveCm);
 	cmdWiFi.attach(CmdRobotRotateRadiants, OnCmdRobotRotateRadiants);
 
-	cmdWiFi.attach(CmdRobotRele, OnCmdRobotRele);
+	cmdWiFi.attach(CmdSetRele, OnCmdRobotRele);
 	cmdWiFi.attach(CmdSetLed, OnCmdSetLed);
 	cmdWiFi.attach(CmdSetLaser, OnCmdSetLaser);
 	cmdWiFi.attach(CmdSetPort, OnCmdSetPort);
@@ -576,7 +576,7 @@ void attachCommandCallbacks()		//va messa in fondo
 	cmdWiFi.attach(CmdGetSensorsHRate, OnCmdGetSensorsHRate);
 	cmdWiFi.attach(CmdRobotSetMode, OnCmdRobotSetMode);
 	#if OPT_SERVOSONAR
-	cmdWiFi.attach(CmdSonarScan,OnCmdSonarScan);
+	cmdWiFi.attach(CmdRobotSonarScan,OnCmdSonarScan);
 	//cmdWiFi.attach(CmdSonarScanBatch, OnCmdSonarScanBatch );
 	//cmdWiFi.attach(CmdSonarScanSync, OnCmdSonarScanSync);
 	#endif
@@ -588,12 +588,12 @@ void attachCommandCallbacks()		//va messa in fondo
 	cmdMMI.attach(CmdReboot, OnCmdReboot);
 
 	cmdMMI.attach(CmdRobotStartMoving, OnCmdRobotStartMoving);
-	cmdMMI.attach(CmdRobotStopMoving, OnCmdRobotStopMoving);
+	cmdMMI.attach(CmdRobotStop, OnCmdRobotStopMoving);
 
 	cmdMMI.attach(CmdRobotMoveCm, OnCmdRobotMoveCm);
 	cmdMMI.attach(CmdRobotRotateRadiants, OnCmdRobotRotateRadiants);
 
-	cmdMMI.attach(CmdRobotRele, OnCmdRobotRele);
+	cmdMMI.attach(CmdSetRele, OnCmdRobotRele);
 	cmdMMI.attach(CmdSetLed, OnCmdSetLed);
 	cmdMMI.attach(CmdSetLaser, OnCmdSetLaser);
 	cmdMMI.attach(CmdSetPort, OnCmdSetPort);
@@ -602,7 +602,7 @@ void attachCommandCallbacks()		//va messa in fondo
 	cmdMMI.attach(CmdGetSensorsHRate, OnCmdGetSensorsHRate);
 	cmdMMI.attach(CmdRobotSetMode, OnCmdRobotSetMode);
 	#if OPT_SERVOSONAR
-	cmdMMI.attach(CmdSonarScan,OnCmdSonarScan);
+	cmdMMI.attach(CmdRobotSonarScan,OnCmdSonarScan);
 		//cmdWiFi.attach(CmdSonarScanBatch, OnCmdSonarScanBatch );
 		//cmdWiFi.attach(CmdSonarScanSync, OnCmdSonarScanSync);
 	#endif
